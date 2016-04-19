@@ -28,7 +28,7 @@ def searchAxes():
 
   try:
 
-    # get proto
+    # get proto, validates
     jreq = fromJson(json.dumps(request.json), services.SearchAxesRequest)
 
     # query backend
@@ -50,10 +50,42 @@ def searchAxes():
     return "Invalid SearchAxesRequest\n"
 
 
-@app.route('/v1/frame/units/search')
+@app.route('/v1/frame/units/search', methods = ['POST'])
 def searchUnits():
-  units = mongo.db.units.find()
-  return str(list(units))
+  """
+  POST /units/search
+  { "names": ["gene-exp"] }
+  """
+
+    # validate request
+  if not request.json:
+    return "Bad content type, must be application/json\n"
+
+  if request.json.get('names', None) is None:
+    return "Names field required for searching units\n"
+
+  try:
+
+    # get proto, validates
+    jreq = fromJson(json.dumps(request.json), services.SearchUnitsRequest)
+
+    # query backend
+    names = map(str, jreq.names)
+    if len(names) > 0:
+      result = mongo.db.units.find({"name": {"$in": names}})
+    else:
+      result = mongo.db.units.find()
+
+    # make proto
+    _protoresp = services.SearchUnitsResponse()
+    for r in result:
+      _protoresp.units.add(name=r['name'], description=r['description'])
+
+    # jsonify proto to send
+    return toFlaskJson(_protoresp)
+
+  except Exception:
+    return "Invalid SearchUnitsRequest\n"
 
 
 @app.route('/v1/frame/keyspaces/search')
