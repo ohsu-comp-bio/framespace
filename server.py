@@ -94,9 +94,11 @@ def searchUnits():
 
 @app.route('/v1/frame/keyspaces/search', methods = ['POST'])
 def searchKeySpaces():
-  # keyspaces = mongo.db.units.find({}, {"keys": 0})
-  # return str(list(keyspaces))
-    # validate request
+  """
+  POST /keyspaces/search
+  {"names": ["name1"], "axis_names": ["axis_name1"], "keyspace_ids": ["57118a40b5262889d1de9c94"], "keys": ["key1"] }
+  """
+  # validate request
   if not request.json:
     return "Bad content type, must be application/json\n"
 
@@ -111,7 +113,7 @@ def searchKeySpaces():
 
     # consolidate filters
     filters = {}
-    
+    mask = None
     if len(jreq.names) > 0:
       filters['name'] = getMongoFieldFilter(jreq.names, str)
     
@@ -125,17 +127,24 @@ def searchKeySpaces():
     # asterix, return all
     # keywords to return some
     if len(jreq.keys) > 0:
-      filters['keys'] = getMongoFieldFilter(jreq.keys, str)
+      # mask keyword omits keys from being returned
+      if jreq.keys[0] == unicode('mask'):
+        mask = {'keys': 0}
+      else:
+        filters['keys'] = getMongoFieldFilter(jreq.keys, str)
 
-    print 'page size', jreq.page_size
     if len(filters) > 0:
-      result = mongo.db.keyspace.find(filters)
+      result = mongo.db.keyspace.find(filters, mask)
     else:
       result = mongo.db.axis.find()
 
+    print filters
+    print mask
     # make proto
     _protoresp = services.SearchKeySpacesResponse()
     for r in result:
+      if r.get('keys', None) is None:
+        r['keys'] = []
       _protoresp.keyspaces.add(name=r['name'], axis_name=r['axis_name'], id=str(r['_id']), keys=r['keys'])
 
     # jsonify proto to send
