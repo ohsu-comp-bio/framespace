@@ -19,7 +19,7 @@ class ConfigReader:
     self.ksmajor_name = getRequired(_ksmajor_map, 'name')
     self.ksmajor_keys = getRequired(_ksmajor_map, 'keys')
     self.ksmajor_axis = getRequired(_ksmajor_map, 'axis')
-    self.ksmajor_tsvmap = getRequired(_ksmajor_map, 'tsv_keyspace_map')
+    # self.ksmajor_tsvmap = getRequired(_ksmajor_map, 'tsv_keyspace_map')
 
     # minor keyspace information
     _ksminor_map = getRequired(config, 'keyspace_minor')

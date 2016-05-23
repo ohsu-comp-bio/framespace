@@ -13,9 +13,6 @@ app = Flask('framespace')
 # connects to the mongodb server running on port 27017
 mongo = PyMongo(app)
 
-@app.route('/v1/frame/test')
-
-
 @app.route('/v1/frame/axes/search', methods = ['POST'])
 def searchAxes():
   """
@@ -106,8 +103,6 @@ def searchKeySpaces():
 
   try:
 
-    print 'getting request', request.json
-
     # get proto, validates
     jreq = fromJson(json.dumps(request.json), services.SearchKeySpacesRequest)
 
@@ -122,6 +117,9 @@ def searchKeySpaces():
 
     if len(jreq.axis_names) > 0:
       filters['axis_name'] = getMongoFieldFilter(jreq.axis_names, str)
+    else:
+      # just experimenting with required fields
+      return "An axis name is required for keyspace search.\n"
     
     # explore here key return options
     # asterix, return all
@@ -136,10 +134,8 @@ def searchKeySpaces():
     if len(filters) > 0:
       result = mongo.db.keyspace.find(filters, mask)
     else:
-      result = mongo.db.axis.find()
+      result = mongo.db.keyspace.find()
 
-    print filters
-    print mask
     # make proto
     _protoresp = services.SearchKeySpacesResponse()
     for r in result:
@@ -154,17 +150,67 @@ def searchKeySpaces():
     return "Invalid SearchKeySpacesRequest\n"
 
 
-@app.route('/v1/frame/dataframes/search')
+@app.route('/v1/frame/dataframes/search', methods=['POST'])
 def searchDataFrames():
-  dataframes = mongo.db.dataframe.find({}, {"contents":0})
-  return str(list(dataframes))
 
+  if not request.json:
+    return "Bad content type, must be application/json\n"
+
+  try:
+
+    # get proto, validates
+    jreq = fromJson(json.dumps(request.json), services.SearchDataFramesRequest)
+    # consolidate filters
+    filters = {}
+    mask = {"contents": 0}
+    if len(jreq.dataframe_ids) > 0:
+      filters['_id'] = getMongoFieldFilter(jreq.dataframe_ids, ObjectId)
+    
+
+    if len(jreq.keyspace_ids) > 0:
+      # if jreq.keyspace_ids[0] == unicode('mask-keys'):
+      #   print 'yes'
+      #   mask['keys'] = 0
+      #   print mask
+      #   filt_keyspaces = jreq.keyspaces_ids[1:]
+      #   print filt_keyspaces
+      # else:
+      #   filt_keyspaces = jreq.keyspace_ids
+      filters['major'] = getMongoFieldFilter(filt_keyspaces, ObjectId)
+
+    # if len(jreq.units) > 0:
+    #   filters['units'] = getMongoFieldFilter(jreq.units, )
+
+    if len(filters) > 0:
+      # return str(filters)
+      result = mongo.db.dataframe.find(filters, mask)
+    else:
+      result = mongo.db.dataframe.find({}, mask)
+
+    # make proto
+    _protoresp = services.SearchDataFramesResponse()
+    for r in result:
+      _protoresp.dataframes.add(id=str(r['_id']), major=models.Dimension(keySpaceId=str(r['major']), keys=getKeys(r['major'])), minor=models.Dimension(keySpaceId=str(r['minor'])), units=r['units'])
+
+    # jsonify proto to send
+    return toFlaskJson(_protoresp)
+
+  except Exception:
+    return "Invalid SearchDataFramesRequest\n"
+
+def getKeys(keyspace_id):
+  keyspace = mongo.db.keyspace.find_one({"_id": ObjectId(keyspace_id)})
+  return keyspace['keys']
 
 # //TODO
 @app.route('/v1/frame/dataframe/slice')
 def sliceDataFrame():
   return 'Not Implemented.'
 
+def nullifyToken(json):
+  if json.get('nextPageToken', None) != None:
+    json['nextPageToken'] = None
+  return json
 
 ### helpers
 def toFlaskJson(protoObject):
@@ -172,7 +218,7 @@ def toFlaskJson(protoObject):
     Serialises a protobuf object as a flask Response object
     """
     js = json_format._MessageToJsonObject(protoObject, True)
-    return jsonify(js)
+    return jsonify(nullifyToken(js))
 
 def fromJson(json, protoClass):
     """

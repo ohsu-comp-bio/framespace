@@ -65,12 +65,13 @@ class Connector:
       # construct a list of unique keyspaces
       m_df = pd.read_table(meta)
       kspaces = m_df[name].unique()
+      # print kspaces
 
       # construct a dictionary of keyspaces for bulk insert
       keyspaces = []
       for ks in kspaces:
         ks_df = m_df[m_df[name].str.contains(ks)]
-        key_list = list(m_df[keys])
+        key_list = list(ks_df[keys])
         keyspaces.append({'name': ks, 'axis_name': axis, 'keys': key_list})
 
       del m_df
