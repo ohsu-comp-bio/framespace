@@ -168,14 +168,11 @@ def searchDataFrames():
     # handle filters
     filters = {}
     if len(jreq.dataframe_ids) > 0:
-      filters['_id'] = getMongoFieldFilter(filt_dataframes, ObjectId)
+      filters['_id'] = getMongoFieldFilter(jreq.dataframe_ids, ObjectId)
 
     if len(jreq.keyspace_ids) > 0:
-      filters['major'] = getMongoFieldFilter(filt_keyspaces, ObjectId)
-      filters['minor'] = getMongoFieldFilter(filt_keyspaces, ObjectId)
-
-    # if len(jreq.units) > 0:
-    #   filters['units'] = getMongoFieldFilter(jreq.units, )
+      filters['major'] = getMongoFieldFilter(jreq.keyspace_ids, ObjectId)
+      filters['minor'] = getMongoFieldFilter(jreq.keyspace_ids, ObjectId)
 
     if len(filters) > 0:
       # return str(filters)
@@ -184,20 +181,18 @@ def searchDataFrames():
       result = mongo.db.dataframe.find({}, mask_contents)
 
     # make proto
-    _protoresp = services.SearchDataFramesResponse()
+    _protoresp = services.SearchDataFramesResponse(dataframes=[])
+    count = 0
     for r in result:
-
       kmaj_name, kmaj_keys = getKeySpaceInfo(r['major'], mask_keys)
       kmin_name, kmin_keys = getKeySpaceInfo(r['minor'], mask_keys)
 
-      contents = buildVectors(r['contents'], kmin_name)
-      print len(contents)
-
-      _protoresp.dataframes.add(id=str(r['_id']), \
+      dataframe = models.DataFrame(id=str(r['_id']), \
         major=models.Dimension(keySpaceId=str(r['major']), keys=kmaj_keys), \
         minor=models.Dimension(keySpaceId=str(r['minor']), keys=kmin_keys), \
-        # contents=buildVectors(r['contents'], )
-        units=r['units'])
+        contents=[])
+
+      _protoresp.dataframes.extend([dataframe])
 
     # jsonify proto to send
     return toFlaskJson(_protoresp)
@@ -205,38 +200,62 @@ def searchDataFrames():
   except Exception:
     return "Invalid SearchDataFramesRequest\n"
 
-def buildVectors(vector_ids, key_name):
-  # get data
-  conts = []
-
-  for vector_id in vector_ids:
-    vector = mongo.db.vector.find_one({"_id": ObjectId(vector_id)})
-    main_key = vector.pop(key_name)
-
-    protovec = models.Vector()
-    protovec.key = main_key
-    for k,v in vector.items():
-      protovec.contents.add(models.KeyValue(key=str(k), float_data=float(v)))
-    conts.append(protovec)
-
-  return conts
-
-
-def setMask(request_list, identifier, mask):
-  if identifier in request_list:
-    request_list.remove(identifier)
-    return {mask: 0}
-  return None
-
-def getKeySpaceInfo(keyspace_id, mask):
-  print 'calling this'
-  keyspace = mongo.db.keyspace.find_one({"_id": ObjectId(keyspace_id)}, mask)
-  return keyspace['name'], keyspace.get('keys', None)
-
 # //TODO
-@app.route('/v1/frame/dataframe/slice')
+@app.route('/v1/frame/dataframe/slice', methods = ['POST'])
 def sliceDataFrame():
-  return 'Not Implemented.'
+  if not request.json:
+    return "Bad content type, must be application/json\n"
+
+  try:
+
+    # get proto, validates
+    jreq = fromJson(json.dumps(request.json), services.SliceDataFrameRequest)
+
+    # masks for development
+    # mask_contents = {"contents": 0}
+    mask_contents = None
+    mask_keys = {"keys": 0}
+
+    # handle filters
+    filters = {}
+    if jreq.dataframe_id != '':
+      result = mongo.db.dataframe.find_one({"_id": ObjectId(jreq.dataframe_id)}, mask_contents)
+    else:
+      return "DataFrame ID Required for SliceDataFrameRequest."
+
+    # make proto
+    kmaj_name, kmaj_keys = getKeySpaceInfo(result['major'], mask_keys)
+    kmin_name, kmin_keys = getKeySpaceInfo(result['minor'], mask_keys)
+
+    _protodf = models.DataFrame(id=str(result['_id']), \
+        major=models.Dimension(keySpaceId=str(result['major']), keys=kmaj_keys), \
+        minor=models.Dimension(keySpaceId=str(result['minor']), keys=kmin_keys), \
+        contents=[])
+
+    if mask_contents is None:
+      vc = result.get('contents', [])
+      # need to add page size here
+      if jreq.page_size > 0:
+        ps_vc = vc[:jreq.page_size]
+      else:
+        ps_vc = vc
+
+      for v in ps_vc:
+        vector = mongo.db.vector.find_one({"_id": ObjectId(v)})
+        main_key = vector.pop(kmin_name)
+        del vector['_id']
+
+        _protovec = models.Vector(key=main_key, contents=[])
+        for k,v in vector.items():
+          _protovec.contents.extend([models.KeyValue(key=str(k), float_data=float(v))])
+
+        _protodf.contents.extend([_protovec])
+
+    # jsonify proto to send
+    return toFlaskJson(_protodf)
+
+  except Exception:
+    return "Invalid SliceDataFrameRequest\n"
 
 def nullifyToken(json):
   if json.get('nextPageToken', None) != None:
@@ -260,6 +279,15 @@ def fromJson(json, protoClass):
 def getMongoFieldFilter(filterList, maptype):
   return {"$in": map(maptype, filterList)}
 
+def setMask(request_list, identifier, mask):
+  if identifier in request_list:
+    request_list.remove(identifier)
+    return {mask: 0}
+  return None
+
+def getKeySpaceInfo(keyspace_id, mask):
+  keyspace = mongo.db.keyspace.find_one({"_id": ObjectId(keyspace_id)}, mask)
+  return keyspace['name'], keyspace.get('keys', [])
 
 if __name__ == '__main__':
     app.run(debug=True)

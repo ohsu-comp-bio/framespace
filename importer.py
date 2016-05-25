@@ -27,7 +27,8 @@ class Importer:
 
     # register the first file to establish minor keyspace
     # replace minor keyspace in tsv identifier with ksminor name
-    init_df = getDataFrame(init_file, ksminor_filter=self.config.ksminor_filter, ksminor_id=self.config.ksminor_id, rename={self.config.ksminor_id: self.config.ksminor_name})
+    self.rename = {self.config.ksminor_id: self.config.ksminor_name}
+    init_df = getDataFrame(init_file, ksminor_filter=self.config.ksminor_filter, ksminor_id=self.config.ksminor_id, rename=self.rename)
     self.minor_keyspace = self.conn.registerMinorKeySpace(init_df, self.config.ksminor_name, self.config.ksminor_name, self.config.ksminor_axis)
     
     # construct first dataframe and add to list to be registered
@@ -42,16 +43,16 @@ class Importer:
 
 
     # work on the rest at once
-    parallelGen(tsv_files, self.minor_keyspace, self.config.units, self.config.db_name)
+    parallelGen(tsv_files, self.minor_keyspace, self.config.units, self.config.db_name, self.config.ksminor_filter, self.config.ksminor_id, self.rename)
 
-def poolLoadTSV((tsv, ks_minor, units, db)):
+def poolLoadTSV((tsv, ks_minor, units, db, ksm_filter, ksm_id, rename)):
   """
   This function is used by multiprocess.Pool to populate framespace with a new dataframe.
   """
   try:
     # register vectors and get the dataframe object for insert
     conn = Connector(db)
-    df_id = conn.registerDataFrame(getDataFrame(tsv), ks_minor, units)
+    df_id = conn.registerDataFrame(getDataFrame(tsv, ksminor_id=ksm_id, ksminor_filter=ksm_filter, rename=rename), ks_minor, units)
   
   except Exception, e:
     traceback.print_exc(file=sys.stdout)
@@ -60,7 +61,7 @@ def poolLoadTSV((tsv, ks_minor, units, db)):
     return (-1, tsv)
   return (0, tsv)
 
-def parallelGen(tsv_files, ks_minor, units, db):
+def parallelGen(tsv_files, ks_minor, units, db, ksm_filter, ksm_id, rename):
   """
   Function that spawns the Pool of vector registration and dataframe production
   """
@@ -68,7 +69,7 @@ def parallelGen(tsv_files, ks_minor, units, db):
   function_args = [None] * len(tsv_files)
   index = 0
   for tsv in tsv_files:
-    function_args[index] = (tsv, ks_minor, units, db)
+    function_args[index] = (tsv, ks_minor, units, db, ksm_filter, ksm_id, rename)
     index += 1
 
   pool = Pool()
