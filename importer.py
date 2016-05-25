@@ -1,4 +1,4 @@
-import argparse, traceback
+import argparse, traceback, sys
 from multiprocessing import Pool
 
 import pandas as pd
@@ -26,8 +26,9 @@ class Importer:
     self.major_keyspaces = self.conn.registerMajorKeySpaces(self.config.ksmajor_file, self.config.ksmajor_name, self.config.ksmajor_keys, self.config.ksmajor_axis)
 
     # register the first file to establish minor keyspace
-    init_df = getDataFrame(init_file, ksminor_filter=self.config.ksminor_filter, ksminor_id=self.config.ksminor_id)
-    self.minor_keyspace = self.conn.registerMinorKeySpace(init_df, self.config.ksminor_id, self.config.ksminor_name, self.config.ksminor_axis)
+    # replace minor keyspace in tsv identifier with ksminor name
+    init_df = getDataFrame(init_file, ksminor_filter=self.config.ksminor_filter, ksminor_id=self.config.ksminor_id, rename={self.config.ksminor_id: self.config.ksminor_name})
+    self.minor_keyspace = self.conn.registerMinorKeySpace(init_df, self.config.ksminor_name, self.config.ksminor_name, self.config.ksminor_axis)
     
     # construct first dataframe and add to list to be registered
     try:
@@ -85,7 +86,7 @@ def parallelGen(tsv_files, ks_minor, units, db):
     raise Exception("Execution failed on {0}".format(failed))
 
 
-def getDataFrame(tsv, ksminor_filter=None, ksminor_id=None):
+def getDataFrame(tsv, ksminor_filter=None, ksminor_id=None, rename=None):
   """
   Tsv to pandas dataframe, and filters if specified.
   """
@@ -100,6 +101,10 @@ def getDataFrame(tsv, ksminor_filter=None, ksminor_id=None):
   # return no filter
   else:
     df = pd.read_table(tsv)
+
+  # explore set with copy warning
+  if rename:
+    df.rename(columns=rename, inplace=True)
 
   return df
 

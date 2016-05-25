@@ -160,37 +160,44 @@ def searchDataFrames():
 
     # get proto, validates
     jreq = fromJson(json.dumps(request.json), services.SearchDataFramesRequest)
-    # consolidate filters
+
+    # handle masks
+    mask_contents = setMask(jreq.dataframe_ids, unicode('mask-contents'), 'contents')
+    mask_keys = setMask(jreq.keyspace_ids, unicode('mask-keys'), 'keys')
+
+    # handle filters
     filters = {}
-    mask = {"contents": 0}
     if len(jreq.dataframe_ids) > 0:
-      filters['_id'] = getMongoFieldFilter(jreq.dataframe_ids, ObjectId)
-    
+      filters['_id'] = getMongoFieldFilter(filt_dataframes, ObjectId)
 
     if len(jreq.keyspace_ids) > 0:
-      # if jreq.keyspace_ids[0] == unicode('mask-keys'):
-      #   print 'yes'
-      #   mask['keys'] = 0
-      #   print mask
-      #   filt_keyspaces = jreq.keyspaces_ids[1:]
-      #   print filt_keyspaces
-      # else:
-      #   filt_keyspaces = jreq.keyspace_ids
       filters['major'] = getMongoFieldFilter(filt_keyspaces, ObjectId)
+      filters['minor'] = getMongoFieldFilter(filt_keyspaces, ObjectId)
 
     # if len(jreq.units) > 0:
     #   filters['units'] = getMongoFieldFilter(jreq.units, )
 
     if len(filters) > 0:
       # return str(filters)
-      result = mongo.db.dataframe.find(filters, mask)
+      result = mongo.db.dataframe.find(filters, mask_contents)
     else:
-      result = mongo.db.dataframe.find({}, mask)
+      result = mongo.db.dataframe.find({}, mask_contents)
 
     # make proto
     _protoresp = services.SearchDataFramesResponse()
     for r in result:
-      _protoresp.dataframes.add(id=str(r['_id']), major=models.Dimension(keySpaceId=str(r['major']), keys=getKeys(r['major'])), minor=models.Dimension(keySpaceId=str(r['minor'])), units=r['units'])
+
+      kmaj_name, kmaj_keys = getKeySpaceInfo(r['major'], mask_keys)
+      kmin_name, kmin_keys = getKeySpaceInfo(r['minor'], mask_keys)
+
+      contents = buildVectors(r['contents'], kmin_name)
+      print len(contents)
+
+      _protoresp.dataframes.add(id=str(r['_id']), \
+        major=models.Dimension(keySpaceId=str(r['major']), keys=kmaj_keys), \
+        minor=models.Dimension(keySpaceId=str(r['minor']), keys=kmin_keys), \
+        # contents=buildVectors(r['contents'], )
+        units=r['units'])
 
     # jsonify proto to send
     return toFlaskJson(_protoresp)
@@ -198,9 +205,33 @@ def searchDataFrames():
   except Exception:
     return "Invalid SearchDataFramesRequest\n"
 
-def getKeys(keyspace_id):
-  keyspace = mongo.db.keyspace.find_one({"_id": ObjectId(keyspace_id)})
-  return keyspace['keys']
+def buildVectors(vector_ids, key_name):
+  # get data
+  conts = []
+
+  for vector_id in vector_ids:
+    vector = mongo.db.vector.find_one({"_id": ObjectId(vector_id)})
+    main_key = vector.pop(key_name)
+
+    protovec = models.Vector()
+    protovec.key = main_key
+    for k,v in vector.items():
+      protovec.contents.add(models.KeyValue(key=str(k), float_data=float(v)))
+    conts.append(protovec)
+
+  return conts
+
+
+def setMask(request_list, identifier, mask):
+  if identifier in request_list:
+    request_list.remove(identifier)
+    return {mask: 0}
+  return None
+
+def getKeySpaceInfo(keyspace_id, mask):
+  print 'calling this'
+  keyspace = mongo.db.keyspace.find_one({"_id": ObjectId(keyspace_id)}, mask)
+  return keyspace['name'], keyspace.get('keys', None)
 
 # //TODO
 @app.route('/v1/frame/dataframe/slice')
