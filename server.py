@@ -7,6 +7,10 @@ from proto.framespace import framespace_pb2 as models
 from proto.framespace import framespace_service_pb2 as services
 
 import google.protobuf.json_format as json_format
+from google.protobuf import struct_pb2 as struct
+from google.protobuf import any_pb2
+from google.protobuf import wrappers_pb2
+
 
 # name passed to flask app will bind to db
 app = Flask('framespace')
@@ -44,7 +48,7 @@ def searchAxes():
     for r in result:
       _protoresp.axes.add(name=r['name'], description=r['description'])
 
-    # jsonify proto to send
+    # jsonify proto to sen
     return toFlaskJson(_protoresp)
 
   except Exception:
@@ -240,14 +244,16 @@ def sliceDataFrame():
       else:
         ps_vc = vc
 
-      for v in ps_vc:
-        vector = mongo.db.vector.find_one({"_id": ObjectId(v)})
+      vectors = mongo.db.vector.find({"_id": {"$in": ps_vc}})
+
+      for vector in vectors:
         main_key = vector.pop(kmin_name)
         del vector['_id']
 
-        _protovec = models.Vector(key=main_key, contents=[])
-        for k,v in vector.items():
-          _protovec.contents.extend([models.KeyValue(key=str(k), float_data=float(v))])
+        #response time ~15 seconds
+        _protovec = models.Vector(key=main_key, contents={str(k):str(v) for k,v in vector.items()})
+        #response time almost 3 minutes
+        # _protovec = models.Vector(key=main_key, contents=[models.KeyValue(key=str(k), float_data=v) for k,v in vector.items()])
 
         _protodf.contents.extend([_protovec])
 
@@ -257,17 +263,23 @@ def sliceDataFrame():
   except Exception:
     return "Invalid SliceDataFrameRequest\n"
 
+def buildContents(keys, value_type):
+  a = dict.fromkeys((range(length)))
+
+
+### helpers
 def nullifyToken(json):
   if json.get('nextPageToken', None) != None:
     json['nextPageToken'] = None
   return json
 
-### helpers
 def toFlaskJson(protoObject):
     """
     Serialises a protobuf object as a flask Response object
     """
     js = json_format._MessageToJsonObject(protoObject, True)
+    # js = json_format.MessageToJson(protoObject, True)
+    # return jsonify(js)
     return jsonify(nullifyToken(js))
 
 def fromJson(json, protoClass):
