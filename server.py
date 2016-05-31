@@ -205,9 +205,12 @@ def searchDataFrames():
   except Exception:
     return "Invalid SearchDataFramesRequest\n"
 
-# //TODO
+
 @app.route('/v1/frame/dataframe/slicepb', methods = ['POST'])
 def sliceDataFramePb():
+  """
+  /dataframe/slice endpoint using protobuf. Keeping here mainly to compare response times.
+  """
   if not request.json:
     return "Bad content type, must be application/json\n"
 
@@ -258,7 +261,6 @@ def sliceDataFramePb():
         _protovec = models.Vector(key=main_key)
         for k,v in vector.items():
           _protovec.contents[str(k)] = v
-        # print json_format.MessageToJson(_protovec, True)
 
         _protodf.contents.extend([_protovec])
 
@@ -268,7 +270,7 @@ def sliceDataFramePb():
   except Exception:
     return "Invalid SliceDataFrameRequest\n"
 
-# //TODO
+
 @app.route('/v1/frame/dataframe/slice', methods = ['POST'])
 def sliceDataFrame():
   """
@@ -279,11 +281,10 @@ def sliceDataFrame():
 
   try:
 
-    # masks for development
-    # mask_contents = {"contents": 0}
+    # masks for development, until masking is considered in the API
     mask_contents = None
-    # mask_keys = {"keys": 0}
     mask_keys = None
+
     dataframe_id = request.json.get('dataframeId', None)
     page_size = request.json.get('pageSize', 0)
 
@@ -321,7 +322,6 @@ def sliceDataFrame():
 
 def createContents(vector, kmin_name):
   key = vector.pop(kmin_name)
-  # del vector[kmin_name]
   del vector['_id']
   return {'key': key, 'contents': vector, 'index':0, 'info':{}}
 
@@ -335,9 +335,7 @@ def toFlaskJson(protoObject):
     """
     Serialises a protobuf object as a flask Response object
     """
-    js = json_format._MessageToJsonObject(protoObject, True)
-    # js = json_format.MessageToJson(protoObject, True)
-    # return jsonify(js)
+    js = json_format.MessageToJson(protoObject, True)
     return jsonify(nullifyToken(js))
 
 def fromJson(json, protoClass):
