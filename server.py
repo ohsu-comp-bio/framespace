@@ -7,9 +7,10 @@ from proto.framespace import framespace_pb2 as models
 from proto.framespace import framespace_service_pb2 as services
 
 import google.protobuf.json_format as json_format
-from google.protobuf import struct_pb2 as struct
+from google.protobuf import struct_pb2
 from google.protobuf import any_pb2
 from google.protobuf import wrappers_pb2
+from google.protobuf.util import json_format_proto3_pb2
 
 
 # name passed to flask app will bind to db
@@ -205,8 +206,8 @@ def searchDataFrames():
     return "Invalid SearchDataFramesRequest\n"
 
 # //TODO
-@app.route('/v1/frame/dataframe/slice', methods = ['POST'])
-def sliceDataFrame():
+@app.route('/v1/frame/dataframe/slicepb', methods = ['POST'])
+def sliceDataFramePb():
   if not request.json:
     return "Bad content type, must be application/json\n"
 
@@ -250,10 +251,14 @@ def sliceDataFrame():
         main_key = vector.pop(kmin_name)
         del vector['_id']
 
-        #response time ~15 seconds
-        _protovec = models.Vector(key=main_key, contents={str(k):str(v) for k,v in vector.items()})
-        #response time almost 3 minutes
-        # _protovec = models.Vector(key=main_key, contents=[models.KeyValue(key=str(k), float_data=v) for k,v in vector.items()])
+        #response time ~15 seconds map<string, string> contents 
+        # _protovec = models.Vector(key=main_key, contents={str(k):str(v) for k,v in vector.items()})
+
+        # better use of protobuf, but still ~1 min google.protobuf.Struct contents
+        _protovec = models.Vector(key=main_key)
+        for k,v in vector.items():
+          _protovec.contents[str(k)] = v
+        # print json_format.MessageToJson(_protovec, True)
 
         _protodf.contents.extend([_protovec])
 
@@ -263,9 +268,62 @@ def sliceDataFrame():
   except Exception:
     return "Invalid SliceDataFrameRequest\n"
 
-def buildContents(keys, value_type):
-  a = dict.fromkeys((range(length)))
+# //TODO
+@app.route('/v1/frame/dataframe/slice', methods = ['POST'])
+def sliceDataFrame():
+  """
+  Slice DataFrame is more heavier than the other endpoints, thus there is a HUGE speed up by by-passing the protobuf.
+  """
+  if not request.json:
+    return "Bad content type, must be application/json\n"
 
+  try:
+
+    # masks for development
+    # mask_contents = {"contents": 0}
+    mask_contents = None
+    # mask_keys = {"keys": 0}
+    mask_keys = None
+    dataframe_id = request.json.get('dataframeId', None)
+    page_size = request.json.get('pageSize', 0)
+
+    # handle filters
+    filters = {}
+    if dataframe_id is not None:
+      result = mongo.db.dataframe.find_one({"_id": ObjectId(dataframe_id)}, mask_contents)
+    else:
+      return "DataFrame ID Required for SliceDataFrameRequest."
+
+    # make proto
+    kmaj_name, kmaj_keys = getKeySpaceInfo(result['major'], mask_keys)
+    kmin_name, kmin_keys = getKeySpaceInfo(result['minor'], mask_keys)
+
+    dataframe = {'id': str(result['_id']), \
+                 'major': {'id': str(result['major']), 'keys': kmaj_keys}, \
+                 'minor': {'id': str(result['minor']), 'keys': kmin_keys}, \
+                 'contents': []}
+
+    if mask_contents is None:
+      vc = result.get('contents', [])
+      # get page size
+      if page_size > 0:
+        ps_vc = vc[:page_size]
+      else:
+        ps_vc = vc
+
+    vectors = mongo.db.vector.find({"_id": {"$in": ps_vc}})
+    dataframe['contents'] = [createContents(vector, kmin_name) for vector in vectors]
+
+    return jsonify(dataframe)
+
+  except Exception:
+    return "Invalid SliceDataFrameRequest\n"
+
+def createContents(vector, kmin_name):
+  key = vector.pop(kmin_name)
+  # del vector[kmin_name]
+  del vector['_id']
+  return {'key': key, 'contents': vector, 'index':0, 'info':{}}
 
 ### helpers
 def nullifyToken(json):
