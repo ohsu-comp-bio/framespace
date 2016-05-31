@@ -7,40 +7,30 @@ from proto.framespace import framespace_pb2 as models
 from proto.framespace import framespace_service_pb2 as services
 
 import google.protobuf.json_format as json_format
-from google.protobuf import struct_pb2
-from google.protobuf import any_pb2
-from google.protobuf import wrappers_pb2
-from google.protobuf.util import json_format_proto3_pb2
-
+from google.protobuf import field_mask_pb2
 
 # name passed to flask app will bind to db
 app = Flask('framespace')
 # connects to the mongodb server running on port 27017
 mongo = PyMongo(app)
 
-@app.route('/v1/frame/axes/search', methods = ['POST'])
+@app.route('/axes/search', methods = ['POST'])
 def searchAxes():
   """
   POST /axes/search
   { "names" : ["gene"] }
   """
-
   # validate request
-  if not request.json:
-    return "Bad content type, must be application/json\n"
-
-  if request.json.get('names', None) is None:
-    return "Names field required for searching axes\n"
+  req = getRequest(request)
 
   try:
 
     # get proto, validates
-    jreq = fromJson(json.dumps(request.json), services.SearchAxesRequest)
+    jreq = fromJson(json.dumps(req), services.SearchAxesRequest)
 
     # query backend
-    names = map(str, jreq.names)
-    if len(names) > 0:
-      result = mongo.db.axis.find({"name": {"$in": names}})
+    if len(jreq.names) > 0:
+      result = mongo.db.axis.find({"name": getMongoFieldFilter(jreq.names, str)})
     else:
       result = mongo.db.axis.find()
 
@@ -56,36 +46,39 @@ def searchAxes():
     return "Invalid SearchAxesRequest\n"
 
 
-@app.route('/v1/frame/units/search', methods = ['POST'])
+@app.route('/units/search', methods = ['POST'])
 def searchUnits():
   """
   POST /units/search
   { "names": ["gene-exp"] }
   """
 
-    # validate request
-  if not request.json:
-    return "Bad content type, must be application/json\n"
-
-  if request.json.get('names', None) is None:
-    return "Names field required for searching units\n"
-
+  # validate request
+  req = getRequest(request)
+  
   try:
 
     # get proto, validates
-    jreq = fromJson(json.dumps(request.json), services.SearchUnitsRequest)
+    jreq = fromJson(json.dumps(req), services.SearchUnitsRequest)
 
+    filters = {}
     # query backend
-    names = map(str, jreq.names)
-    if len(names) > 0:
-      result = mongo.db.units.find({"name": {"$in": names}})
+    if len(jreq.names) > 0:
+      filters['name'] = getMongoFieldFilter(jreq.names, str)
+
+    # issue with this - investigate
+    # if len(jreq.ids) > 0:
+    #   filters['_id'] = getMongoFieldFilter(jreq.ids, ObjectId)
+    
+    if len(filters) > 0:
+      result = mongo.db.units.find({}, filters)
     else:
       result = mongo.db.units.find()
 
     # make proto
     _protoresp = services.SearchUnitsResponse()
     for r in result:
-      _protoresp.units.add(name=r['name'], description=r['description'])
+      _protoresp.units.add(name=r['name'], description=r['description'], id=str(r['_id']))
 
     # jsonify proto to send
     return toFlaskJson(_protoresp)
@@ -94,7 +87,7 @@ def searchUnits():
     return "Invalid SearchUnitsRequest\n"
 
 
-@app.route('/v1/frame/keyspaces/search', methods = ['POST'])
+@app.route('/keyspaces/search', methods = ['POST'])
 def searchKeySpaces():
   """
   POST /keyspaces/search
@@ -104,7 +97,8 @@ def searchKeySpaces():
   if not request.json:
     return "Bad content type, must be application/json\n"
 
-  # add required check
+  if request.json.get('axisNames', None) is None:
+    return 'Axis name required for keyspace search.\n'
 
   try:
 
@@ -122,9 +116,6 @@ def searchKeySpaces():
 
     if len(jreq.axis_names) > 0:
       filters['axis_name'] = getMongoFieldFilter(jreq.axis_names, str)
-    else:
-      # just experimenting with required fields
-      return "An axis name is required for keyspace search.\n"
     
     # explore here key return options
     # asterix, return all
@@ -155,7 +146,7 @@ def searchKeySpaces():
     return "Invalid SearchKeySpacesRequest\n"
 
 
-@app.route('/v1/frame/dataframes/search', methods=['POST'])
+@app.route('/dataframes/search', methods=['POST'])
 def searchDataFrames():
 
   if not request.json:
@@ -206,7 +197,7 @@ def searchDataFrames():
     return "Invalid SearchDataFramesRequest\n"
 
 
-@app.route('/v1/frame/dataframe/slicepb', methods = ['POST'])
+@app.route('/dataframe/slicepb', methods = ['POST'])
 def sliceDataFramePb():
   """
   /dataframe/slice endpoint using protobuf. Keeping here mainly to compare response times.
@@ -271,7 +262,7 @@ def sliceDataFramePb():
     return "Invalid SliceDataFrameRequest\n"
 
 
-@app.route('/v1/frame/dataframe/slice', methods = ['POST'])
+@app.route('/dataframe/slice', methods = ['POST'])
 def sliceDataFrame():
   """
   Slice DataFrame is more heavier than the other endpoints, thus there is a HUGE speed up by by-passing the protobuf.
@@ -327,7 +318,7 @@ def createContents(vector, kmin_name):
 
 ### helpers
 def nullifyToken(json):
-  if json.get('nextPageToken', None) != None:
+  if json.get('nextPageToken', None) is not None:
     json['nextPageToken'] = None
   return json
 
@@ -335,7 +326,8 @@ def toFlaskJson(protoObject):
     """
     Serialises a protobuf object as a flask Response object
     """
-    js = json_format.MessageToJson(protoObject, True)
+    # js = json_format.MessageToJson(protoObject, True)
+    js = json_format._MessageToJsonObject(protoObject, True)
     return jsonify(nullifyToken(js))
 
 def fromJson(json, protoClass):
@@ -345,7 +337,11 @@ def fromJson(json, protoClass):
     return json_format.Parse(json, protoClass())
 
 def getMongoFieldFilter(filterList, maptype):
-  return {"$in": map(maptype, filterList)}
+  try:
+    return {"$in": map(maptype, filterList)}
+  except:
+    return None
+
 
 def setMask(request_list, identifier, mask):
   if identifier in request_list:
@@ -356,6 +352,17 @@ def setMask(request_list, identifier, mask):
 def getKeySpaceInfo(keyspace_id, mask):
   keyspace = mongo.db.keyspace.find_one({"_id": ObjectId(keyspace_id)}, mask)
   return keyspace['name'], keyspace.get('keys', [])
+
+def getRequest(request, return_json={"names":[]}):
+  """
+  Helper method to handle empty jsons
+  """
+  if request.get_json() == {}:
+    return return_json
+  elif not request.json:
+    return "Bad content type, must be application/json\n"
+
+  return request.json
 
 if __name__ == '__main__':
     app.run(debug=True)
