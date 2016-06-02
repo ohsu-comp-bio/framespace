@@ -97,8 +97,8 @@ def searchKeySpaces():
   if not request.json:
     return "Bad content type, must be application/json\n"
 
-  # if request.json.get('axisNames', None) is None:
-  #   return 'Axis name required for keyspace search.\n'
+  if request.json.get('axisNames', None) is None:
+    return 'Axis name required for keyspace search.\n'
 
   try:
 
@@ -111,14 +111,12 @@ def searchKeySpaces():
     if len(jreq.names) > 0:
       filters['name'] = getMongoFieldFilter(jreq.names, str)
     
-    # NOTE - sensitive filter, if one id is invalid no keyspaces are returned
     if len(jreq.keyspace_ids) > 0:
       filters['_id'] = getMongoFieldFilter(jreq.keyspace_ids, ObjectId)
 
     if len(jreq.axis_names) > 0:
       filters['axis_name'] = getMongoFieldFilter(jreq.axis_names, str)
     
-    print filters
     # explore here key return options
     # asterix, return all
     # keywords to return some
@@ -126,9 +124,11 @@ def searchKeySpaces():
       # mask keyword omits keys from being returned
       if jreq.keys[0] == unicode('mask'):
         mask = {'keys': 0}
+        filters['keys'] = getMongoFieldFilter(jreq.keys[1:], str)
       else:
         filters['keys'] = getMongoFieldFilter(jreq.keys, str)
 
+    print filters
     if len(filters) > 0:
       result = mongo.db.keyspace.find(filters, mask)
     else:
