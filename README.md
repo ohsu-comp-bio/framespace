@@ -62,6 +62,39 @@ Search available units.
 
 Field | Type | Default | Required | Description | Supported
 --- | --- | --- | --- | --- | ---
-names | repeated string | [] | No | List of axes names to search over. | Yes
+ids | repeated string | [] | No | List of unit ids to search over. | Yes
+names | repeated string | [] | No | List of unit names to search over. | Yes
 pageSize | int32 | 0 | No | Number of axes to return. | No
 pageToken | string | "" | No | Page token to begin searching over. | No
+
+**Note**: when ids and names are both specified, units satisfying both filter fields will only be returned. 
+
+#### UnitsSearchRequest
+
+```
+{
+  "names": [
+    "tcga-gene-expression"
+  ]
+}
+```
+
+Note that a blank response object will return all available units.
+
+```
+curl -H "Content-Type: application/json" -X POST -d {} http://localhost:5000/units/search
+
+{
+  "nextPageToken": null,
+  "units": [
+    {
+      "description": "RSEM expression estimates are normalized to set the upper quartile count at 1000 for gene level",
+      "id": "5746202b2ed58fc9cfcb37a1",
+      "name": "tcga-gene-expression"
+    }
+  ]
+}
+```
+
+
+

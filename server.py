@@ -67,12 +67,11 @@ def searchUnits():
     if len(jreq.names) > 0:
       filters['name'] = getMongoFieldFilter(jreq.names, str)
 
-    # issue with this - investigate
-    # if len(jreq.ids) > 0:
-    #   filters['_id'] = getMongoFieldFilter(jreq.ids, ObjectId)
-    
+    if len(jreq.ids) > 0:
+      filters['_id'] = getMongoFieldFilter(jreq.ids, ObjectId)
+
     if len(filters) > 0:
-      result = mongo.db.units.find({}, filters)
+      result = mongo.db.units.find(filters)
     else:
       result = mongo.db.units.find()
 
@@ -98,8 +97,8 @@ def searchKeySpaces():
   if not request.json:
     return "Bad content type, must be application/json\n"
 
-  if request.json.get('axisNames', None) is None:
-    return 'Axis name required for keyspace search.\n'
+  # if request.json.get('axisNames', None) is None:
+  #   return 'Axis name required for keyspace search.\n'
 
   try:
 
@@ -119,6 +118,7 @@ def searchKeySpaces():
     if len(jreq.axis_names) > 0:
       filters['axis_name'] = getMongoFieldFilter(jreq.axis_names, str)
     
+    print filters
     # explore here key return options
     # asterix, return all
     # keywords to return some
