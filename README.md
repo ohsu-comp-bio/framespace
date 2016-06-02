@@ -128,6 +128,7 @@ Example:
 
 ```
 
+```
 curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5000/keyspaces/search
 
 {
@@ -170,6 +171,8 @@ curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5
     "mask", "TCGA-ZQ-A9CR-01A-11R-A39E-31", "TCGA-ZR-A9CJ-01B-11R-A38D-31"
   ]
 }
+```
+
 ```
 
 curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5000/keyspaces/search
