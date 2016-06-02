@@ -27,6 +27,7 @@ def searchAxes():
 
     # get proto, validates
     jreq = fromJson(json.dumps(req), services.SearchAxesRequest)
+    print json_format.MessageToJson(jreq, True)
 
     # query backend
     if len(jreq.names) > 0:
@@ -111,6 +112,7 @@ def searchKeySpaces():
     if len(jreq.names) > 0:
       filters['name'] = getMongoFieldFilter(jreq.names, str)
     
+    # NOTE - sensitive filter, if one id is invalid no keyspaces are returned
     if len(jreq.keyspace_ids) > 0:
       filters['_id'] = getMongoFieldFilter(jreq.keyspace_ids, ObjectId)
 
