@@ -107,7 +107,8 @@ def searchKeySpaces():
 
     # consolidate filters
     filters = {}
-    mask = None
+    mask = setMask(jreq.keys, unicode('mask'), "keys")
+
     if len(jreq.names) > 0:
       filters['name'] = getMongoFieldFilter(jreq.names, str)
     
@@ -117,18 +118,9 @@ def searchKeySpaces():
     if len(jreq.axis_names) > 0:
       filters['axis_name'] = getMongoFieldFilter(jreq.axis_names, str)
     
-    # explore here key return options
-    # asterix, return all
-    # keywords to return some
     if len(jreq.keys) > 0:
-      # mask keyword omits keys from being returned
-      if jreq.keys[0] == unicode('mask'):
-        mask = {'keys': 0}
-        filters['keys'] = getMongoFieldFilter(jreq.keys[1:], str)
-      else:
-        filters['keys'] = getMongoFieldFilter(jreq.keys, str)
+      filters['keys'] = getMongoFieldFilter(jreq.keys, str)
 
-    print filters
     if len(filters) > 0:
       result = mongo.db.keyspace.find(filters, mask)
     else:
