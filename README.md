@@ -210,7 +210,7 @@ Field | Type | Default | Required | Description | Supported
 keyspaceIds | repeated string | [] | Yes | Return dataframes with dimensions from the following keyspace ids | Yes
 dataframeIds | repeated string | [] | No | Return dataframes with the following dataframe ids | Yes
 unitIds | repeated string | [] | No | Return dataframes with the following units | No
-pageSize | int32 | 0 | No | Number of axes to return. | No
+pageSize | int32 | 0 | No | Number of dataframes to return. | No
 pageToken | string | "" | No | Page token to begin searching over. | No
 
 **Note**: keyspaceIds can be retrieved from a `/keyspaces/search` request.
@@ -301,4 +301,57 @@ curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5
 }
 ```
 
+### SliceDataFrame `/dataframe/slice`
 
+Return a dataframe, subset of a dataframe, or a transposed dataframe.
+
+#### DataFramesRequest
+
+Field | Type | Default | Required | Description | Supported
+--- | --- | --- | --- | --- | ---
+dataframeId | string | "" | Yes | Return dataframe with this id. | Yes
+newMajor | Dimension | major Dimension of dataframe | No | Return dataframe with this major dimension. | No
+newMinor | Dimension | minor Dimension of dataframe | No | Return dataframe with this minor dimension. | No
+pageStart | int32 | 0 | No | Start (zero-based) index of vector to return. | No
+pageEnd | int32 | length of dataframe contents | No | End (zero-based, exclusive) index of vector to return. | No
+
+#### DataFramesResponse
+
+```
+{
+  "dataframeId": "57462030b52628d31def1bad",
+  "pageEnd": 1
+}
+```
+
+The above request will return a single vector based on database index. Keys omitted in the request below for display.
+
+```
+
+curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5000/dataframe/slice
+
+{
+  "contents": [
+    {
+      "contents": {
+        "TCGA-OR-A5J1-01A-11R-A29S-07": 16.3305,
+        "TCGA-OR-A5J2-01A-11R-A29S-07": 9.5987,
+        ...,
+        "TCGA-PK-A5HB-01A-11R-A29S-07": 152.378
+      },
+      "index": 0,
+      "info": {},
+      "key": "A1BG|1"
+    }
+  ],
+  "id": "57462030b52628d31def1bad",
+  "major": {
+    "id": "5746202cb52628d31deecb75",
+    "keys": []
+  },
+  "minor": {
+    "id": "5746202cb52628d31deecb96",
+    "keys": []
+  }
+}
+```

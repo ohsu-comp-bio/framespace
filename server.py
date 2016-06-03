@@ -276,10 +276,10 @@ def sliceDataFrame():
 
     # masks for development, until masking is considered in the API
     mask_contents = None
-    mask_keys = None
+    mask_keys = {"keys": 0}
 
     dataframe_id = request.json.get('dataframeId', None)
-    page_size = request.json.get('pageSize', 0)
+    page_start = request.json.get('pageStart', 0)
 
     # handle filters
     filters = {}
@@ -299,24 +299,21 @@ def sliceDataFrame():
 
     if mask_contents is None:
       vc = result.get('contents', [])
-      # get page size
-      if page_size > 0:
-        ps_vc = vc[:page_size]
-      else:
-        ps_vc = vc
+      page_end = request.json.get('pageEnd', len(vc))
+      vc_sub = vc[page_start:page_end]
 
-    vectors = mongo.db.vector.find({"_id": {"$in": ps_vc}})
-    dataframe['contents'] = [createContents(vector, kmin_name) for vector in vectors]
+      vectors = mongo.db.vector.find({"_id": {"$in": vc_sub}})
+      dataframe['contents'] = [createContents(vector, kmin_name, index) for index, vector in enumerate(vectors)]
 
     return jsonify(dataframe)
 
   except Exception:
     return "Invalid SliceDataFrameRequest\n"
 
-def createContents(vector, kmin_name):
+def createContents(vector, kmin_name, index):
   key = vector.pop(kmin_name)
   del vector['_id']
-  return {'key': key, 'contents': vector, 'index':0, 'info':{}}
+  return {'key': key, 'contents': vector, 'index':index, 'info':{}}
 
 def nullifyToken(json):
   if json.get('nextPageToken', None) is not None:
