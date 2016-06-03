@@ -224,7 +224,9 @@ pageToken | string | "" | No | Page token to begin searching over. | No
 }
 ```
 
-...
+```
+curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5000/dataframes/search
+
 {
   "dataframes": [
     {
