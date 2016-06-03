@@ -105,10 +105,11 @@ def searchKeySpaces():
     # get proto, validates
     jreq = fromJson(json.dumps(request.json), services.SearchKeySpacesRequest)
 
-    # consolidate filters
-    filters = {}
+    # handle masks
     mask = setMask(jreq.keys, unicode('mask'), "keys")
 
+    # consolidate filters
+    filters = {}
     if len(jreq.names) > 0:
       filters['name'] = getMongoFieldFilter(jreq.names, str)
     
@@ -146,13 +147,18 @@ def searchDataFrames():
   if not request.json:
     return "Bad content type, must be application/json\n"
 
+  check_ks = request.json.get('keyspaceIds', None)
+  if check_ks is None or (len(check_ks) == 1 and check_ks[0] == unicode('mask-keys')):
+    return 'keyspaceIds required when searching dataframes.\n'
+
   try:
 
     # get proto, validates
     jreq = fromJson(json.dumps(request.json), services.SearchDataFramesRequest)
 
-    # handle masks
-    mask_contents = setMask(jreq.dataframe_ids, unicode('mask-contents'), 'contents')
+    # handle masks, ommitting contents from endpoint
+    mask_contents = None
+    # mask_contents = setMask(jreq.dataframe_ids, unicode('mask-contents'), 'contents')
     mask_keys = setMask(jreq.keyspace_ids, unicode('mask-keys'), 'keys')
 
     # handle filters
@@ -161,26 +167,28 @@ def searchDataFrames():
       filters['_id'] = getMongoFieldFilter(jreq.dataframe_ids, ObjectId)
 
     if len(jreq.keyspace_ids) > 0:
-      filters['major'] = getMongoFieldFilter(jreq.keyspace_ids, ObjectId)
-      filters['minor'] = getMongoFieldFilter(jreq.keyspace_ids, ObjectId)
+      filters['$or'] = [{'major': getMongoFieldFilter(jreq.keyspace_ids, ObjectId)}]
+      filters['$or'].append({'minor': getMongoFieldFilter(jreq.keyspace_ids, ObjectId)})
 
     if len(filters) > 0:
-      # return str(filters)
       result = mongo.db.dataframe.find(filters, mask_contents)
     else:
       result = mongo.db.dataframe.find({}, mask_contents)
 
     # make proto
     _protoresp = services.SearchDataFramesResponse(dataframes=[])
-    count = 0
     for r in result:
       kmaj_name, kmaj_keys = getKeySpaceInfo(r['major'], mask_keys)
       kmin_name, kmin_keys = getKeySpaceInfo(r['minor'], mask_keys)
 
       dataframe = models.DataFrame(id=str(r['_id']), \
-        major=models.Dimension(keySpaceId=str(r['major']), keys=kmaj_keys), \
-        minor=models.Dimension(keySpaceId=str(r['minor']), keys=kmin_keys), \
-        contents=[])
+        major=models.Dimension(keyspace_id=str(r['major']), keys=kmaj_keys), \
+        minor=models.Dimension(keyspace_id=str(r['minor']), keys=kmin_keys), \
+        units=[], contents=[])
+
+      for unit in r['units']:
+        dataframe.units.extend([models.Unit(name=unit['name'], \
+                                            description=unit['description'])])
 
       _protoresp.dataframes.extend([dataframe])
 
@@ -310,7 +318,6 @@ def createContents(vector, kmin_name):
   del vector['_id']
   return {'key': key, 'contents': vector, 'index':0, 'info':{}}
 
-### helpers
 def nullifyToken(json):
   if json.get('nextPageToken', None) is not None:
     json['nextPageToken'] = None

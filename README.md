@@ -69,7 +69,7 @@ pageToken | string | "" | No | Page token to begin searching over. | No
 
 **Note**: When ids and names are both specified, units satisfying both filter fields will only be returned. If an invalid id/name is in the list, no value will be returned.
 
-#### SearchUnitsRequest
+#### SearchUnitsResponse
 
 ```
 {
@@ -198,3 +198,105 @@ curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5
 }
 
 ```
+
+### DataFramesSearch `/dataframes/search`
+
+Search available dataframes. Contents are omitted from dataframes by default, since contents of a dataframe can be retrieved from `/dataslice/search` endpoint.
+
+#### SearchDataFramesRequest
+
+Field | Type | Default | Required | Description | Supported
+--- | --- | --- | --- | --- | ---
+keyspaceIds | repeated string | [] | Yes | Return dataframes with dimensions from the following keyspace ids | Yes
+dataframeIds | repeated string | [] | No | Return dataframes with the following dataframe ids | Yes
+unitIds | repeated string | [] | No | Return dataframes with the following units | No
+pageSize | int32 | 0 | No | Number of axes to return. | No
+pageToken | string | "" | No | Page token to begin searching over. | No
+
+**Note**: keyspaceIds can be retrieved from a `/keyspaces/search` request.
+
+
+#### SearchDataFramesResponse
+
+```
+{
+  "keyspaceIds": ["5746202cb52628d31deecb85"]
+}
+```
+
+...
+{
+  "dataframes": [
+    {
+      "contents": [],
+      "id": "57462082b52628d354ef6bc4",
+      "major": {
+        "keys": [
+          "TCGA-3C-AAAU-01A-11R-A41B-07",
+          "TCGA-3C-AALI-01A-11R-A41B-07",
+          ...
+        ],
+        "keyspaceId": "5746202cb52628d31deecb85"
+      },
+      "metadata": {},
+      "minor": {
+        "keys": [
+          "A1BG|1",
+          "A1CF|29974",
+          ...,
+        ],
+        "keyspaceId": "5746202cb52628d31deecb96"
+      },
+      "units": [
+        {
+          "description": "RSEM expression estimates are normalized to set the upper quartile count at 1000 for gene level",
+          "id": "",
+          "name": "tcga-gene-expression"
+        }
+      ]
+    }
+  ],
+  "nextPageToken": null
+}
+```
+
+
+**Note**: If no keys returned is the desired behavior, specify "keys-mask" as the first elemnet in the `keyspaceIds` field:
+
+```
+{
+  "keyspaceIds": ["mask-keys", "5746202cb52628d31deecb85"]
+}
+```
+
+```
+curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5000/dataframes/search
+
+{
+  "dataframes": [
+    {
+      "contents": [],
+      "id": "57462082b52628d354ef6bc4",
+      "major": {
+        "keys": [],
+        "keyspaceId": "5746202cb52628d31deecb85"
+      },
+      "metadata": {},
+      "minor": {
+        "keys": [],
+        "keyspaceId": "5746202cb52628d31deecb96"
+      },
+      "units": [
+        {
+          "description": "RSEM expression estimates are normalized to set the upper quartile count at 1000 for gene level",
+          "id": "",
+          "name": "tcga-gene-expression"
+        }
+      ]
+    }
+  ],
+  "nextPageToken": null
+}
+```
+
+
