@@ -24,6 +24,9 @@ class Connector:
   def __exit__(self, exc_type, exc_value, traceback):
     # create indexes, where should this happen?
     self.keyspace = keyspace.create_index([{"keys", pymongo.ASCENDING}])
+    self.dataframe = dataframe.create_index([{"contents": 1}])
+    self.vector = vector.create_index([{"contents":1}])
+    # reindex?
     self.conn.close()
 
   def registerAxes(self, axes, ksmajor_ax, ksminor_ax):
@@ -81,13 +84,20 @@ class Connector:
     return keyspaces
 
 
-  def registerMinorKeySpace(self, df, ksminor_id, ksminor_name, ksminor_axis):
+  def registerMinorKeySpace(self, df, ksminor_id, ksminor_name, ksminor_axis, rename=None):
     """
     Registers a minor KeySpace, any filtering is assumed to have happened prior to registration.
     ie. ksminor_filter must occur on df before running minor ks registration.
     """
     # get keys
-    keys = list(df[str(ksminor_id)])
+    print 'in register minor keyspace'
+    print ksminor_id
+    print ksminor_name
+    if rename is None:
+      keys = list(df[str(ksminor_name)])
+    else:
+      print 'rename flag set', rename
+      keys = list(df[str(rename[ksminor_id])])
 
     # register minor keyspace
     minor_keyspace = {"name": ksminor_name, "axis_name": ksminor_axis, "keys": keys}
@@ -112,9 +122,18 @@ class Connector:
       raise ValueError("Not all keys in dimension are registered to keyspace.")
 
     # vectors are inserted into dataframe as ids to get around data storage limit
-    vectors = self.vector.insert_many(df.reset_index(drop=True).to_dict(orient='records'))
+    # print df.columns
+    # vectors = map(createVector, df.reset_index(drop=True).to_dict(orient='records'))
+    # for vec in df.reset_index(drop=True).to_dict(orient='records'):
+    # print df_dict
+    # print df_dict['key']
+    # vectors = self.vector.insert_many(df.reset_index(drop=True).to_dict(orient='records'))
+    vectors = self.vector.insert_many(map(createVector, df.reset_index(drop=True).to_dict(orient='records')))
     dataframe = {"major": md_ks[0]['_id'], "minor": ksminor_objid, "units": units, "contents": list(vectors.inserted_ids)}
 
     _id = self.dataframe.insert_one(dataframe)
     return _id
 
+def createVector(vector):
+  key = vector.pop('key')
+  return {'key': key, 'contents': vector, 'info':{}}

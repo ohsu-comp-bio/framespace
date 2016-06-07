@@ -27,9 +27,12 @@ class Importer:
 
     # register the first file to establish minor keyspace
     # replace minor keyspace in tsv identifier with ksminor name
-    self.rename = {self.config.ksminor_id: self.config.ksminor_name}
+    # fix this later
+    # self.rename = {self.config.ksminor_id: self.config.ksminor_name}
+    self.rename = {self.config.ksminor_id: 'key'}
+    print self.rename
     init_df = getDataFrame(init_file, ksminor_filter=self.config.ksminor_filter, ksminor_id=self.config.ksminor_id, rename=self.rename)
-    self.minor_keyspace = self.conn.registerMinorKeySpace(init_df, self.config.ksminor_name, self.config.ksminor_name, self.config.ksminor_axis)
+    self.minor_keyspace = self.conn.registerMinorKeySpace(init_df, self.config.ksminor_id, self.config.ksminor_name, self.config.ksminor_axis, rename=self.rename)
     
     # construct first dataframe and add to list to be registered
     try:

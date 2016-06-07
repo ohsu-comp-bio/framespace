@@ -1,10 +1,11 @@
 from flask import Flask, request, jsonify
 from flask.ext.pymongo import PyMongo
 from bson import ObjectId
-import json
+import json, ast
 
 from proto.framespace import framespace_pb2 as models
 from proto.framespace import framespace_service_pb2 as services
+from framespace.models import DataFrame
 
 import google.protobuf.json_format as json_format
 from google.protobuf import field_mask_pb2
@@ -199,121 +200,115 @@ def searchDataFrames():
     return "Invalid SearchDataFramesRequest\n"
 
 
-@app.route('/dataframe/slicepb', methods = ['POST'])
-def sliceDataFramePb():
-  """
-  /dataframe/slice endpoint using protobuf. Keeping here mainly to compare response times.
-  """
-  if not request.json:
-    return "Bad content type, must be application/json\n"
-
-  try:
-
-    # get proto, validates
-    jreq = fromJson(json.dumps(request.json), services.SliceDataFrameRequest)
-
-    # masks for development
-    # mask_contents = {"contents": 0}
-    mask_contents = None
-    mask_keys = {"keys": 0}
-
-    # handle filters
-    filters = {}
-    if jreq.dataframe_id != '':
-      result = mongo.db.dataframe.find_one({"_id": ObjectId(jreq.dataframe_id)}, mask_contents)
-    else:
-      return "DataFrame ID Required for SliceDataFrameRequest."
-
-    # make proto
-    kmaj_name, kmaj_keys = getKeySpaceInfo(result['major'], mask_keys)
-    kmin_name, kmin_keys = getKeySpaceInfo(result['minor'], mask_keys)
-
-    _protodf = models.DataFrame(id=str(result['_id']), \
-        major=models.Dimension(keySpaceId=str(result['major']), keys=kmaj_keys), \
-        minor=models.Dimension(keySpaceId=str(result['minor']), keys=kmin_keys), \
-        contents=[])
-
-    if mask_contents is None:
-      vc = result.get('contents', [])
-      # need to add page size here
-      if jreq.page_size > 0:
-        ps_vc = vc[:jreq.page_size]
-      else:
-        ps_vc = vc
-
-      vectors = mongo.db.vector.find({"_id": {"$in": ps_vc}})
-
-      for vector in vectors:
-        main_key = vector.pop(kmin_name)
-        del vector['_id']
-
-        #response time ~15 seconds map<string, string> contents 
-        # _protovec = models.Vector(key=main_key, contents={str(k):str(v) for k,v in vector.items()})
-
-        # better use of protobuf, but still ~1 min google.protobuf.Struct contents
-        _protovec = models.Vector(key=main_key)
-        for k,v in vector.items():
-          _protovec.contents[str(k)] = v
-
-        _protodf.contents.extend([_protovec])
-
-    # jsonify proto to send
-    return toFlaskJson(_protodf)
-
-  except Exception:
-    return "Invalid SliceDataFrameRequest\n"
-
-
 @app.route('/dataframe/slice', methods = ['POST'])
 def sliceDataFrame():
   """
   Slice DataFrame is more heavier than the other endpoints, thus there is a HUGE speed up by by-passing the protobuf.
+  message SliceDataFrameRequest {
+    string dataframe_id = 1;
+    Dimension new_major = 2;
+    Dimension new_minor = 3;
+    int32 page_start = 4;
+    int32 page_end = 5;
+  }
+  BRCA - 165M - 5755fe95b5262817bd7c8a37
+  ACC - 11M - 5755fe4ab5262817897c3a20
+  BLCA - 57M - 5755fe64b5262817bc7c8a37
   """
   if not request.json:
     return "Bad content type, must be application/json\n"
 
+  if request.json.get('dataframeId', None) is None:
+    return "dataframeId required for sliceDataframe.\n"
+
   try:
 
-    # masks for development, until masking is considered in the API
-    mask_contents = None
+    # filtering objects
     mask_keys = {"keys": 0}
 
-    dataframe_id = request.json.get('dataframeId', None)
+    # inits
+    filters = {}
+    vec_filters = {}
+    kmaj_keys = None
+    kmin_keys = None
+
+    dataframe_id = request.json.get('dataframeId')
     page_start = request.json.get('pageStart', 0)
 
-    # handle filters
-    filters = {}
+    new_major = checkDimension(request.json, 'newMajor')
+    new_minor = checkDimension(request.json, 'newMinor')
+
     if dataframe_id is not None:
-      result = mongo.db.dataframe.find_one({"_id": ObjectId(dataframe_id)}, mask_contents)
+      # introduce earlier filters if possible
+      result = mongo.db.dataframe.find_one({"_id": ObjectId(dataframe_id)})
     else:
       return "DataFrame ID Required for SliceDataFrameRequest."
 
-    # make proto
-    kmaj_name, kmaj_keys = getKeySpaceInfo(result['major'], mask_keys)
-    kmin_name, kmin_keys = getKeySpaceInfo(result['minor'], mask_keys)
+    # prep vector query
+    vc = result.get('contents', [])
+    # 1000 -> 2 seconds
+    # 5000 -> 10 seconds
+    # 7500 -> 16 seconds
+    # 10000 -> 21 seconds
+    # >25000 (len(vc))-> 49 seconds
+    page_end = request.json.get('pageEnd', len(vc))
 
-    dataframe = {'id': str(result['_id']), \
-                 'major': {'id': str(result['major']), 'keys': kmaj_keys}, \
-                 'minor': {'id': str(result['minor']), 'keys': kmin_keys}, \
-                 'contents': []}
+    # if page start is outside of dataframe length, return empty
+    if page_start > len(vc):
 
-    if mask_contents is None:
-      vc = result.get('contents', [])
-      page_end = request.json.get('pageEnd', len(vc))
-      vc_sub = vc[page_start:page_end]
+      dataframe = {"id": str(result["_id"]), \
+                 "major": {"keyspaceId": str(result['major']), "keys": []}, \
+                 "minor": {"keyspaceId": str(result['minor']), "keys": []}, \
+                 "contents": []}
 
-      vectors = mongo.db.vector.find({"_id": {"$in": vc_sub}})
-      dataframe['contents'] = [createContents(vector, kmin_name, index) for index, vector in enumerate(vectors)]
+      return jsonify(dataframe)
 
+    elif page_end > len(vc):
+      page_end = len(vc)
+
+    # set filter object
+    vec_filters["_id"] = {"$in": vc[page_start:page_end]}
+
+    # subset major
+    if new_major is not None:
+      kmaj_keys = {"contents."+str(k):1 for k in new_major['keys']}
+      kmaj_keys['key'] = 1
+
+    # subset minor
+    if new_minor is not None:
+      vec_filters['key'] = {"$in": new_minor['keys']}
+
+    vectors = mongo.db.vector.find(vec_filters, kmaj_keys)
+    vectors.batch_size(1000000)
+
+    # contents = map(createContents, vectors)
+    contents = {vector["key"]:vector["contents"] for vector in vectors}
+
+    # avoid invalid keys passing through to keys
+    # explore impacts on response time
+    if new_major is not None:
+      kmaj_keys = contents[contents.keys()[0]].keys()
+
+    if new_minor is not None:
+      kmin_keys = contents.keys()
+
+    dataframe = {"id": str(result["_id"]), \
+                 "major": {"keyspaceId": str(result['major']), "keys": kmaj_keys}, \
+                 "minor": {"keyspaceId": str(result['minor']), "keys": kmin_keys}, \
+                 "contents": contents}
+
+    # this is causing overhead
     return jsonify(dataframe)
 
   except Exception:
     return "Invalid SliceDataFrameRequest\n"
 
-def createContents(vector, kmin_name, index):
-  key = vector.pop(kmin_name)
-  del vector['_id']
-  return {'key': key, 'contents': vector, 'index':index, 'info':{}}
+def checkDimension(request, dimension):
+  check_dim = request.get(dimension, None)
+  if check_dim is not None:
+    if len(check_dim.get('keys', [])) <= 0:
+      return None
+  return check_dim
 
 def nullifyToken(json):
   if json.get('nextPageToken', None) is not None:
@@ -324,7 +319,6 @@ def toFlaskJson(protoObject):
     """
     Serialises a protobuf object as a flask Response object
     """
-    # js = json_format.MessageToJson(protoObject, True)
     js = json_format._MessageToJsonObject(protoObject, True)
     return jsonify(nullifyToken(js))
 
@@ -347,7 +341,7 @@ def setMask(request_list, identifier, mask):
     return {mask: 0}
   return None
 
-def getKeySpaceInfo(keyspace_id, mask):
+def getKeySpaceInfo(keyspace_id, mask=None):
   keyspace = mongo.db.keyspace.find_one({"_id": ObjectId(keyspace_id)}, mask)
   return keyspace['name'], keyspace.get('keys', [])
 
