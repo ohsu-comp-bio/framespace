@@ -8,7 +8,7 @@ from proto.framespace import framespace_service_pb2 as services
 from framespace.models import DataFrame
 
 import google.protobuf.json_format as json_format
-from google.protobuf import field_mask_pb2
+from google.protobuf import field_mask_pb2, struct_pb2
 
 # name passed to flask app will bind to db
 app = Flask('framespace')
@@ -203,17 +203,7 @@ def searchDataFrames():
 @app.route('/dataframe/slice', methods = ['POST'])
 def sliceDataFrame():
   """
-  Slice DataFrame is more heavier than the other endpoints, thus there is a HUGE speed up by by-passing the protobuf.
-  message SliceDataFrameRequest {
-    string dataframe_id = 1;
-    Dimension new_major = 2;
-    Dimension new_minor = 3;
-    int32 page_start = 4;
-    int32 page_end = 5;
-  }
-  BRCA - 165M - 5755fe95b5262817bd7c8a37
-  ACC - 11M - 5755fe4ab5262817897c3a20
-  BLCA - 57M - 5755fe64b5262817bc7c8a37
+  Speed up by bypassing proto
   """
   if not request.json:
     return "Bad content type, must be application/json\n"
@@ -239,28 +229,20 @@ def sliceDataFrame():
     new_minor = checkDimension(request.json, 'newMinor')
 
     if dataframe_id is not None:
-      # introduce earlier filters if possible
       result = mongo.db.dataframe.find_one({"_id": ObjectId(dataframe_id)})
     else:
       return "DataFrame ID Required for SliceDataFrameRequest."
 
     # prep vector query
     vc = result.get('contents', [])
-    # 1000 -> 2 seconds
-    # 5000 -> 10 seconds
-    # 7500 -> 16 seconds
-    # 10000 -> 21 seconds
-    # >25000 (len(vc))-> 49 seconds
     page_end = request.json.get('pageEnd', len(vc))
 
     # if page start is outside of dataframe length, return empty
     if page_start > len(vc):
-
       dataframe = {"id": str(result["_id"]), \
                  "major": {"keyspaceId": str(result['major']), "keys": []}, \
                  "minor": {"keyspaceId": str(result['minor']), "keys": []}, \
                  "contents": []}
-
       return jsonify(dataframe)
 
     elif page_end > len(vc):
@@ -297,11 +279,11 @@ def sliceDataFrame():
                  "minor": {"keyspaceId": str(result['minor']), "keys": kmin_keys}, \
                  "contents": contents}
 
-    # this is causing overhead
     return jsonify(dataframe)
 
   except Exception:
     return "Invalid SliceDataFrameRequest\n"
+
 
 def checkDimension(request, dimension):
   check_dim = request.get(dimension, None)
