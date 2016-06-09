@@ -8,7 +8,7 @@ from connector import Connector
 
 class Importer:
 
-  def __init__(self, config, files):
+  def __init__(self, config, files, host='0.0.0.0'):
     """
     Importer will setup config and perform parallel import of tsv files into mongo.
     """
@@ -20,7 +20,7 @@ class Importer:
     init_file = files[0]
     tsv_files = files[1:]
 
-    self.conn = Connector(self.config.db_name)
+    self.conn = Connector(self.config.db_name, host=host)
     self.conn.registerAxes(self.config.axes, self.config.ksmajor_axis, self.config.ksminor_axis)
     self.conn.registerUnits(self.config.units)
     self.major_keyspaces = self.conn.registerMajorKeySpaces(self.config.ksmajor_file, self.config.ksmajor_name, self.config.ksmajor_keys, self.config.ksmajor_axis)
@@ -120,12 +120,15 @@ if __name__ == '__main__':
   parser.add_argument("-c", "--config", required=False, type=str, 
                       help="Input config.")
 
+  parser.add_argument("-H", "--host", required=False, type=str, 
+                      help="Mongo host.")
+
   parser.add_argument("-i", "--inputs", nargs='+', type=str, required=False, default=[], 
                     help="List of tsvs to input as DataFrames")
 
   args = parser.parse_args()
 
-  importer = Importer(args.config, args.inputs)
+  importer = Importer(args.config, args.inputs, host=args.host)
 
   print importer.config.db_name
   

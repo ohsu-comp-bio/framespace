@@ -1,19 +1,22 @@
+import os, json
 from flask import Flask, request, jsonify
-from flask.ext.pymongo import PyMongo
+from pymongo import MongoClient
 from bson import ObjectId
-import json, ast
 
 from proto.framespace import framespace_pb2 as models
 from proto.framespace import framespace_service_pb2 as services
-from framespace.models import DataFrame
 
 import google.protobuf.json_format as json_format
-from google.protobuf import field_mask_pb2, struct_pb2
 
-# name passed to flask app will bind to db
+# name passed to flask app will bind to db,
+# if not docker, then run locally
 app = Flask('framespace')
-# connects to the mongodb server running on port 27017
-mongo = PyMongo(app)
+try:
+  mongo = MongoClient(os.environ['DB_PORT_27017_TCP_ADDR'], 27017)
+except:
+  mongo = MongoClient()
+
+db = mongo['framespace']
 
 @app.route('/axes/search', methods = ['POST'])
 def searchAxes():
@@ -25,16 +28,16 @@ def searchAxes():
   req = getRequest(request)
 
   try:
-
+    print db.collections
     # get proto, validates
     jreq = fromJson(json.dumps(req), services.SearchAxesRequest)
     print json_format.MessageToJson(jreq, True)
 
     # query backend
     if len(jreq.names) > 0:
-      result = mongo.db.axis.find({"name": getMongoFieldFilter(jreq.names, str)})
+      result = db.axis.find({"name": getMongoFieldFilter(jreq.names, str)})
     else:
-      result = mongo.db.axis.find()
+      result = db.axis.find()
 
     # make proto
     _protoresp = services.SearchAxesResponse()
@@ -72,9 +75,9 @@ def searchUnits():
       filters['_id'] = getMongoFieldFilter(jreq.ids, ObjectId)
 
     if len(filters) > 0:
-      result = mongo.db.units.find(filters)
+      result = db.units.find(filters)
     else:
-      result = mongo.db.units.find()
+      result = db.units.find()
 
     # make proto
     _protoresp = services.SearchUnitsResponse()
@@ -124,9 +127,9 @@ def searchKeySpaces():
       filters['keys'] = getMongoFieldFilter(jreq.keys, str)
 
     if len(filters) > 0:
-      result = mongo.db.keyspace.find(filters, mask)
+      result = db.keyspace.find(filters, mask)
     else:
-      result = mongo.db.keyspace.find()
+      result = db.keyspace.find()
 
     # make proto
     _protoresp = services.SearchKeySpacesResponse()
@@ -172,9 +175,9 @@ def searchDataFrames():
       filters['$or'].append({'minor': getMongoFieldFilter(jreq.keyspace_ids, ObjectId)})
 
     if len(filters) > 0:
-      result = mongo.db.dataframe.find(filters, mask_contents)
+      result = db.dataframe.find(filters, mask_contents)
     else:
-      result = mongo.db.dataframe.find({}, mask_contents)
+      result = db.dataframe.find({}, mask_contents)
 
     # make proto
     _protoresp = services.SearchDataFramesResponse(dataframes=[])
@@ -203,7 +206,7 @@ def searchDataFrames():
 @app.route('/dataframe/slice', methods = ['POST'])
 def sliceDataFrame():
   """
-  Speed up by bypassing proto
+  Speed up by bypassing
   """
   if not request.json:
     return "Bad content type, must be application/json\n"
@@ -229,7 +232,7 @@ def sliceDataFrame():
     new_minor = checkDimension(request.json, 'newMinor')
 
     if dataframe_id is not None:
-      result = mongo.db.dataframe.find_one({"_id": ObjectId(dataframe_id)})
+      result = db.dataframe.find_one({"_id": ObjectId(dataframe_id)})
     else:
       return "DataFrame ID Required for SliceDataFrameRequest."
 
@@ -260,7 +263,7 @@ def sliceDataFrame():
     if new_minor is not None:
       vec_filters['key'] = {"$in": new_minor['keys']}
 
-    vectors = mongo.db.vector.find(vec_filters, kmaj_keys)
+    vectors = db.vector.find(vec_filters, kmaj_keys)
     vectors.batch_size(1000000)
 
     # contents = map(createContents, vectors)
@@ -324,7 +327,7 @@ def setMask(request_list, identifier, mask):
   return None
 
 def getKeySpaceInfo(keyspace_id, mask=None):
-  keyspace = mongo.db.keyspace.find_one({"_id": ObjectId(keyspace_id)}, mask)
+  keyspace = db.keyspace.find_one({"_id": ObjectId(keyspace_id)}, mask)
   return keyspace['name'], keyspace.get('keys', [])
 
 def getRequest(request, return_json={"names":[]}):
@@ -339,4 +342,4 @@ def getRequest(request, return_json={"names":[]}):
   return request.json
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', debug=True)

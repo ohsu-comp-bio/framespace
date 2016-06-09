@@ -1,14 +1,18 @@
-import pymongo
+import pymongo, os
 from pymongo import MongoClient
 import pandas as pd
 
 class Connector:
 
-  def __init__(self, database):
+  def __init__(self, database, host='0.0.0.0'):
     """
     Connect to specified database, and ensure proper setup.
     """
-    self.conn = MongoClient()
+    self.conn = MongoClient(host, 27017)
+    # try:
+    #   self.conn = MongoClient(os.environ['DB_PORT_27017_TCP_ADDR'], 27017)
+    # except:
+    #   self.conn = MongoClient()
     self.db = self.conn[database]
 
     # check collections
@@ -90,9 +94,6 @@ class Connector:
     ie. ksminor_filter must occur on df before running minor ks registration.
     """
     # get keys
-    print 'in register minor keyspace'
-    print ksminor_id
-    print ksminor_name
     if rename is None:
       keys = list(df[str(ksminor_name)])
     else:
