@@ -2,6 +2,24 @@
 
 Reference server implementation for FrameSpace using Python Flask, MongoDB, and Protobufs. See [here](https://github.com/ohsu-computational-biology/ccc_api/tree/master/proto/framespace) for more information on FrameSpace.
 
+## Spin up with docker-compose
+
+Use docker-compose spin up the FrameSpace reference server, assuming usage with docker-machine:
+
+1. Clone framespace-ref: `git clone https://github.com/ohsu-computational-biology/framespace-ref.git`
+
+1. `cd framespace-ref`
+
+1. docker-compose build
+
+1. docker-compose up
+
+1. Load test data: `python importer.py -c data/import.config -i data/tcgaLive*.tsv -H $(docker-machine ip default)
+
+1. Query the system: `curl -H "Content-Type: application/json" -X POST -d '{}' http://$(docker-machine ip default):5000/axes/search`
+
+1. Make more request by following endpoint documentation below!
+
 ## Endpoint Descriptions
 
 ### SearchAxes `/axes/search`
