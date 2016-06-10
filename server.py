@@ -25,7 +25,9 @@ def searchAxes():
   { "names" : ["gene"] }
   """
   # validate request
+  print 'reaching here'
   req = getRequest(request)
+  print req
 
   try:
     print db.collections
