@@ -14,7 +14,16 @@ Use docker-compose to spin up the FrameSpace reference server, assuming usage wi
 
 1. `docker-compose up`
 
-1. To load test data, you need pandas. If you are in a virtualenv run `pip install pandas`. This is not included in server `requirements.txt` to decrease build and up time. Follow these commands to load: 
+1. Set up a virtualenv for importing:
+
+```
+virtualenv venv
+source venv/bin/activate
+pip install -r requirements.txt
+pip install pandas
+```
+
+1. Load test data:
 
 ```
 cd util
