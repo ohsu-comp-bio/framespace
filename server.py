@@ -6,7 +6,7 @@ from bson import ObjectId
 from proto.framespace import framespace_pb2 as models
 from proto.framespace import framespace_service_pb2 as services
 
-import google.protobuf.json_format as json_format
+from google.protobuf import json_format
 
 # name passed to flask app will bind to db,
 # if not docker, then run locally
@@ -25,15 +25,11 @@ def searchAxes():
   { "names" : ["gene"] }
   """
   # validate request
-  print 'reaching here'
   req = getRequest(request)
-  print req
 
   try:
-    print db.collections
     # get proto, validates
     jreq = fromJson(json.dumps(req), services.SearchAxesRequest)
-    print json_format.MessageToJson(jreq, True)
 
     # query backend
     if len(jreq.names) > 0:

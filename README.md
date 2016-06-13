@@ -4,21 +4,26 @@ Reference server implementation for FrameSpace using Python Flask, MongoDB, and 
 
 ## Spin up with docker-compose
 
-Use docker-compose spin up the FrameSpace reference server, assuming usage with docker-machine:
+Use docker-compose to spin up the FrameSpace reference server, assuming usage with docker-machine:
 
 1. Clone framespace-ref: `git clone https://github.com/ohsu-computational-biology/framespace-ref.git`
 
 1. `cd framespace-ref`
 
-1. docker-compose build
+1. `docker-compose build`
 
-1. docker-compose up
+1. `docker-compose up`
 
-1. Load test data: `python importer.py -c data/import.config -i data/tcgaLive*.tsv -H $(docker-machine ip default)
+1. To load test data, you need pandas. If you are in a virtualenv run `pip install pandas`. This is not included in server `requirements.txt` to decrease build and up time. Follow these commands to load: 
+
+```
+cd util
+python importer.py -c ../test/data/import.config -i ../test/data/tcgaLive*.tsv -H $(docker-machine ip default)
+```
 
 1. Query the system: `curl -H "Content-Type: application/json" -X POST -d '{}' http://$(docker-machine ip default):5000/axes/search`
 
-1. Make more request by following endpoint documentation below!
+1. Make more requests by following endpoint documentation below!
 
 ## Endpoint Descriptions
 
@@ -51,7 +56,7 @@ Example:
 Note that a blank response object will return all available axes:
 
 ```
-$ curl -H "Content-Type: application/json" -X POST -d {} http://localhost:5000/axes/search
+$ curl -H "Content-Type: application/json" -X POST -d {} http://$(docker-machine ip default):5000/axes/search
 
 {
   "axes": [
@@ -100,7 +105,7 @@ pageToken | string | "" | No | Page token to begin searching over. | No
 Note that a blank response object will return all available units.
 
 ```
-curl -H "Content-Type: application/json" -X POST -d {} http://localhost:5000/units/search
+curl -H "Content-Type: application/json" -X POST -d {} http://$(docker-machine ip default):5000/units/search
 
 {
   "nextPageToken": null,
@@ -147,7 +152,7 @@ Example:
 ```
 
 ```
-curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5000/keyspaces/search
+curl -H "Content-Type: application/json" -X POST -d searchobj http://$(docker-machine ip default):5000/keyspaces/search
 
 {
   "keyspaces": [
@@ -186,14 +191,15 @@ curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5
     "sample"
   ],
   "keys": [
-    "mask", "TCGA-ZQ-A9CR-01A-11R-A39E-31", "TCGA-ZR-A9CJ-01B-11R-A38D-31"
+    "mask", 
+    "TCGA-ZQ-A9CR-01A-11R-A39E-31", "TCGA-ZR-A9CJ-01B-11R-A38D-31"
   ]
 }
 ```
 
 ```
 
-curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5000/keyspaces/search
+curl -H "Content-Type: application/json" -X POST -d searchobj http://$(docker-machine ip default):5000/keyspaces/search
 
 {
   "keyspaces": [
@@ -238,25 +244,25 @@ pageToken | string | "" | No | Page token to begin searching over. | No
 
 ```
 {
-  "keyspaceIds": ["5746202cb52628d31deecb85"]
+  "keyspaceIds": ["575f1216b526282d2c120192"]
 }
 ```
 
 ```
-curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5000/dataframes/search
+curl -H "Content-Type: application/json" -X POST -d searchobj http://$(docker-machine ip default):5000/dataframes/search
 
 {
   "dataframes": [
     {
-      "contents": [],
-      "id": "57462082b52628d354ef6bc4",
+      "contents": {},
+      "id": "575f1216b526282d2c120966",
       "major": {
         "keys": [
-          "TCGA-3C-AAAU-01A-11R-A41B-07",
-          "TCGA-3C-AALI-01A-11R-A41B-07",
+          "TCGA-OR-A5J1-01A-11R-A29S-07",
+          "TCGA-OR-A5J2-01A-11R-A29S-07",
           ...
         ],
-        "keyspaceId": "5746202cb52628d31deecb85"
+        "keyspaceId": "575f1216b526282d2c120192"
       },
       "metadata": {},
       "minor": {
@@ -285,26 +291,26 @@ curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5
 
 ```
 {
-  "keyspaceIds": ["mask-keys", "5746202cb52628d31deecb85"]
+  "keyspaceIds": ["mask-keys", "575f1216b526282d2c120192"]
 }
 ```
 
 ```
-curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5000/dataframes/search
+curl -H "Content-Type: application/json" -X POST -d searchobj http://$(docker-machine ip default):5000/dataframes/search
 
 {
   "dataframes": [
     {
-      "contents": [],
-      "id": "57462082b52628d354ef6bc4",
+      "contents": {},
+      "id": "575f1216b526282d2c120966",
       "major": {
         "keys": [],
-        "keyspaceId": "5746202cb52628d31deecb85"
+        "keyspaceId": "575f1216b526282d2c120192"
       },
       "metadata": {},
       "minor": {
         "keys": [],
-        "keyspaceId": "5746202cb52628d31deecb96"
+        "keyspaceId": "575f1216b526282d2c1201b3"
       },
       "units": [
         {
@@ -337,7 +343,7 @@ pageEnd | int32 | length of dataframe contents | No | End (zero-based, exclusive
 
 ```
 {
-  "dataframeId": "57462030b52628d31def1bad",
+  "dataframeId": "575f1216b526282d2c120966",
   "pageEnd": 1
 }
 ```
@@ -349,27 +355,22 @@ The above request will return a single vector based on database index. Keys omit
 curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5000/dataframe/slice
 
 {
-  "contents": [
-    {
-      "contents": {
-        "TCGA-OR-A5J1-01A-11R-A29S-07": 16.3305,
-        "TCGA-OR-A5J2-01A-11R-A29S-07": 9.5987,
+  "contents": {
+    "A1BG|1": {
+      "TCGA-OR-A5J1-01A-11R-A29S-07": 16.3305,
+      "TCGA-OR-A5J2-01A-11R-A29S-07": 9.5987,
         ...,
-        "TCGA-PK-A5HB-01A-11R-A29S-07": 152.378
-      },
-      "index": 0,
-      "info": {},
-      "key": "A1BG|1"
+      "TCGA-PK-A5HB-01A-11R-A29S-07": 152.378
     }
-  ],
-  "id": "57462030b52628d31def1bad",
+  },
+  "id": "575f1216b526282d2c120966",
   "major": {
-    "id": "5746202cb52628d31deecb75",
-    "keys": []
+    "keys": null,
+    "keyspaceId": "575f1216b526282d2c120192"
   },
   "minor": {
-    "id": "5746202cb52628d31deecb96",
-    "keys": []
+    "keys": null,
+    "keyspaceId": "575f1216b526282d2c1201b3"
   }
 }
 ```
