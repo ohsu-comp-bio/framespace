@@ -46,15 +46,15 @@ class Importer:
 
 
     # work on the rest at once
-    parallelGen(tsv_files, self.minor_keyspace, self.config.units, self.config.db_name, self.config.ksminor_filter, self.config.ksminor_id, self.rename)
+    parallelGen(tsv_files, self.minor_keyspace, self.config.units, self.config.db_name, self.config.ksminor_filter, self.config.ksminor_id, self.rename, host)
 
-def poolLoadTSV((tsv, ks_minor, units, db, ksm_filter, ksm_id, rename)):
+def poolLoadTSV((tsv, ks_minor, units, db, ksm_filter, ksm_id, rename, host)):
   """
   This function is used by multiprocess.Pool to populate framespace with a new dataframe.
   """
   try:
     # register vectors and get the dataframe object for insert
-    conn = Connector(db)
+    conn = Connector(db, host=host)
     df_id = conn.registerDataFrame(getDataFrame(tsv, ksminor_id=ksm_id, ksminor_filter=ksm_filter, rename=rename), ks_minor, units)
   
   except Exception, e:
@@ -64,7 +64,7 @@ def poolLoadTSV((tsv, ks_minor, units, db, ksm_filter, ksm_id, rename)):
     return (-1, tsv)
   return (0, tsv)
 
-def parallelGen(tsv_files, ks_minor, units, db, ksm_filter, ksm_id, rename):
+def parallelGen(tsv_files, ks_minor, units, db, ksm_filter, ksm_id, rename, host):
   """
   Function that spawns the Pool of vector registration and dataframe production
   """
@@ -72,7 +72,7 @@ def parallelGen(tsv_files, ks_minor, units, db, ksm_filter, ksm_id, rename):
   function_args = [None] * len(tsv_files)
   index = 0
   for tsv in tsv_files:
-    function_args[index] = (tsv, ks_minor, units, db, ksm_filter, ksm_id, rename)
+    function_args[index] = (tsv, ks_minor, units, db, ksm_filter, ksm_id, rename, host)
     index += 1
 
   pool = Pool()
