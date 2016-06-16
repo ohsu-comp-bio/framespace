@@ -441,24 +441,24 @@ keyspace_major/name | string | Conditionally | - | Column name in metadata file 
 keyspace_major/keys | string | Conditionally | - | Column name in metadata file that hold the keys.
 keyspace_major/axis | string | Conditionally | - | Assign these keyspaces to this axis. 
 keyspace_minor | dict | Yes | - | Map that holds import information for the minor keyspace.
-keyspace_minor/id | string | Yes | Column name in tsvs to be imported which holds the minor keyspace.
+keyspace_minor/id | string | Yes | - | Column name in tsvs to be imported which holds the minor keyspace.
 keyspace_minor/name | string | Yes | - |Name of the minor keyspace.
 keyspace_minor/filter | string | No | - | Remove this from values in the minor keyspace before creating. Often useful for genes, ie. remove genes labelled "?"
 keyspace_minor/axis | string | Yes | - | Assign this keyspace to this axis.
 axes | list | No | [] | List of axis objects to register. If empty, keyspace_minor/axis (or keyspace_major/axis) must already be registered with framespace.
 units | list | Conditionally | - | A list of at least one unit to assign to this database. Will registered only units that are not already registered (based on name).
-infer_units | bool | No | True if units are inferred from minor keyspace. Currently used for clinical tsvs. 
+infer_units | bool | No | - | True if units are inferred from minor keyspace. Currently used for clinical tsvs. 
 transpose | bool | No | false | True if major keyspace is vertical.
 
 ### TSV Translation
 
 The initial usage is designed to support bulk loading of a set of tsvs with variable major dimensions derived from the same axis and a consistent minor dimension. For example, the tsvs in `test/data` which have samples from various groups on the X and consistent hugo gene sets on the Y. Given the bulk entry of these as major dimensions, the keyspace information is read from a metadata file like the one in `test/data/metadata.tsv`. This setup requires keyspace_major and keyspace_minor maps defined in the import config like `test/data/import.config`. 
 
-<img width="533" alt="screen shot 2016-06-16 at 11 15 50 am" src="https://cloud.githubusercontent.com/assets/6373975/16128093/180d5fe2-33b4-11e6-846a-90c6a866732b.png">
+<img width="533" alt="screen shot 2016-06-16 at 11 15 50 am" align="middle" src="https://cloud.githubusercontent.com/assets/6373975/16128093/180d5fe2-33b4-11e6-846a-90c6a866732b.png">
 
 If a user wishes to upload additional tsvs associated to prexisiting keyspaces, the keyspace major object is omitted. If the minor dimension is associated to an already registerd dimension, the matrix can be transposed by setting `"transpose": true`.
 
-<img width="412" alt="screen shot 2016-06-16 at 11 16 25 am" src="https://cloud.githubusercontent.com/assets/6373975/16128079/0eb0f378-33b4-11e6-8e9c-012076ef62b9.png">
+<img width="412" alt="screen shot 2016-06-16 at 11 16 25 am" align="middle" src="https://cloud.githubusercontent.com/assets/6373975/16128079/0eb0f378-33b4-11e6-8e9c-012076ef62b9.png">
 
 
 
