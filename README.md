@@ -4,7 +4,7 @@ Reference server implementation for FrameSpace using Python Flask, MongoDB, and 
 
 ## Spin up with docker-compose
 
-Use docker-compose to spin up the FrameSpace reference server, assuming usage with docker-machine:
+Use docker-compose to spin up the FrameSpace reference server, assuming usage with a docker-machine named `default`:
 
 1. Clone framespace-ref: `git clone https://github.com/ohsu-computational-biology/framespace-ref.git`
 
@@ -23,11 +23,16 @@ pip install -r requirements.txt
 pip install pandas
 ```
 
-1. Load test data:
+1. Load test gene-expression data:
 
 ```
 cd util
 python importer.py -c ../test/data/import.config -i ../test/data/tcgaLive*.tsv -H $(docker-machine ip default)
+```
+
+1. Load test clinical data:
+```
+python importer.py -c ../test/data/clinical/import.config -i ../test/data/clinical/nationwidechildrens.org_ACC_bio.patient.tsv -H $(docker-machine ip default)
 ```
 
 1. Query the system: `curl -H "Content-Type: application/json" -X POST -d '{}' http://$(docker-machine ip default):5000/axes/search`
@@ -161,7 +166,7 @@ Example:
 ```
 
 ```
-curl -H "Content-Type: application/json" -X POST -d searchobj http://$(docker-machine ip default):5000/keyspaces/search
+curl -H "Content-Type: application/json" -X POST --data @searchobj http://$(docker-machine ip default):5000/keyspaces/search
 
 {
   "keyspaces": [
@@ -208,7 +213,7 @@ curl -H "Content-Type: application/json" -X POST -d searchobj http://$(docker-ma
 
 ```
 
-curl -H "Content-Type: application/json" -X POST -d searchobj http://$(docker-machine ip default):5000/keyspaces/search
+curl -H "Content-Type: application/json" -X POST --data @searchobj http://$(docker-machine ip default):5000/keyspaces/search
 
 {
   "keyspaces": [
@@ -258,7 +263,7 @@ pageToken | string | "" | No | Page token to begin searching over. | No
 ```
 
 ```
-curl -H "Content-Type: application/json" -X POST -d searchobj http://$(docker-machine ip default):5000/dataframes/search
+curl -H "Content-Type: application/json" -X POST --data @searchobj http://$(docker-machine ip default):5000/dataframes/search
 
 {
   "dataframes": [
@@ -305,7 +310,7 @@ curl -H "Content-Type: application/json" -X POST -d searchobj http://$(docker-ma
 ```
 
 ```
-curl -H "Content-Type: application/json" -X POST -d searchobj http://$(docker-machine ip default):5000/dataframes/search
+curl -H "Content-Type: application/json" -X POST --data @searchobj http://$(docker-machine ip default):5000/dataframes/search
 
 {
   "dataframes": [
@@ -361,7 +366,7 @@ The above request will return a single vector based on database index. Keys omit
 
 ```
 
-curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5000/dataframe/slice
+curl -H "Content-Type: application/json" -X POST --data @searchobj http://localhost:5000/dataframe/slice
 
 {
   "contents": {
@@ -383,3 +388,78 @@ curl -H "Content-Type: application/json" -X POST -d searchobj http://localhost:5
   }
 }
 ```
+
+To subset based on keys:
+
+```
+{
+  "dataframeId": "57607404b5262843990d406c",
+  "newMajor": {
+    "keys": ["TCGA-OR-A5J1-01A-11R-A29S-07", "TCGA-OR-A5J1-01A-11R-A29S-07"]
+  },
+  "newMinor": {
+    "keys": ["A1BG|1"]
+  }
+}
+```
+
+```
+
+curl -H "Content-Type: application/json" -X POST --data @searchobj http://localhost:5000/dataframe/slice
+
+{
+  "contents": {
+    "A1BG|1": {
+      "TCGA-OR-A5J1-01A-11R-A29S-07": 16.3305,
+      "TCGA-OR-A5J2-01A-11R-A29S-07": 9.5987
+    }
+  },
+  "id": "575f1216b526282d2c120966",
+  "major": {
+    "keys": null,
+    "keyspaceId": "575f1216b526282d2c120192"
+  },
+  "minor": {
+    "keys": null,
+    "keyspaceId": "575f1216b526282d2c1201b3"
+  }
+}
+```
+
+**Note**: Transpose is not yet supported, so `newMajor` keys must be a list of keys from the existing major dimension.
+
+## Import Process
+
+The import process uses a config file to understand how to import the specified tsvs. The fields in this config file are summarized in the table below. Example configs can be found in the `test/data/` folder.
+
+Field | Type | Required | Default | Description 
+--- | --- | --- | --- | --- | ---
+db_name | string | No | framespace | Name of mongo database to import, creates new if not existing.
+keyspace_major | dict | No | {} | Dictionary of keyspace major information. If this is set, all keyspace_major fields must be specified. Major keyspaces are created from a metadata file (see `test/data/metadata.txt`).
+keyspace_major/file | string | Conditionally | - | Path to metadata file used to create the major keyspaces.
+keyspace_major/name | string | Conditionally | - | Column name in metadata file that holds keyspace names.
+keyspace_major/keys | string | Conditionally | - | Column name in metadata file that hold the keys.
+keyspace_major/axis | string | Conditionally | - | Assign these keyspaces to this axis. 
+keyspace_minor | dict | Yes | - | Map that holds import information for the minor keyspace.
+keyspace_minor/id | string | Yes | Column name in tsvs to be imported which holds the minor keyspace.
+keyspace_minor/name | string | Yes | - |Name of the minor keyspace.
+keyspace_minor/filter | string | No | - | Remove this from values in the minor keyspace before creating. Often useful for genes, ie. remove genes labelled "?"
+keyspace_minor/axis | string | Yes | - | Assign this keyspace to this axis.
+axes | list | No | [] | List of axis objects to register. If empty, keyspace_minor/axis (or keyspace_major/axis) must already be registered with framespace.
+units | list | Conditionally | - | A list of at least one unit to assign to this database. Will registered only units that are not already registered (based on name).
+infer_units | bool | No | True if units are inferred from minor keyspace. Currently used for clinical tsvs. 
+transpose | bool | No | false | True if major keyspace is vertical.
+
+### TSV Translation
+
+The initial usage is designed to support bulk loading of a set of tsvs with variable major dimensions derived from the same axis and a consistent minor dimension. For example, the tsvs in `test/data` which have samples from various groups on the X and consistent hugo gene sets on the Y. Given the bulk entry of these as major dimensions, the keyspace information is read from a metadata file like the one in `test/data/metadata.tsv`. This setup requires keyspace_major and keyspace_minor maps defined in the import config like `test/data/import.config`. 
+
+<img width="533" alt="screen shot 2016-06-16 at 11 15 50 am" src="https://cloud.githubusercontent.com/assets/6373975/16128093/180d5fe2-33b4-11e6-846a-90c6a866732b.png">
+
+If a user wishes to upload additional tsvs associated to prexisiting keyspaces, the keyspace major object is omitted. If the minor dimension is associated to an already registerd dimension, the matrix can be transposed by setting `"transpose": true`.
+
+<img width="412" alt="screen shot 2016-06-16 at 11 16 25 am" src="https://cloud.githubusercontent.com/assets/6373975/16128079/0eb0f378-33b4-11e6-8e9c-012076ef62b9.png">
+
+
+
+

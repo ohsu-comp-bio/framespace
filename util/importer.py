@@ -21,18 +21,28 @@ class Importer:
     tsv_files = files[1:]
 
     self.conn = Connector(self.config.db_name, host=host)
-    self.conn.registerAxes(self.config.axes, self.config.ksmajor_axis, self.config.ksminor_axis)
-    self.conn.registerUnits(self.config.units)
-    self.major_keyspaces = self.conn.registerMajorKeySpaces(self.config.ksmajor_file, self.config.ksmajor_name, self.config.ksmajor_keys, self.config.ksmajor_axis)
+
+    if self.config.axes is not None:
+      self.conn.registerAxes(self.config.axes, self.config.ksmajor_axis, self.config.ksminor_axis)
+
+    if self.config.ksmajor_map is not None:
+      self.major_keyspaces = self.conn.registerMajorKeySpaces(self.config.ksmajor_file, self.config.ksmajor_name, self.config.ksmajor_keys, self.config.ksmajor_axis)
 
     # register the first file to establish minor keyspace
     # replace minor keyspace in tsv identifier with ksminor name
     # fix this later
-    # self.rename = {self.config.ksminor_id: self.config.ksminor_name}
     self.rename = {self.config.ksminor_id: 'key'}
-    print self.rename
-    init_df = getDataFrame(init_file, ksminor_filter=self.config.ksminor_filter, ksminor_id=self.config.ksminor_id, rename=self.rename)
-    self.minor_keyspace = self.conn.registerMinorKeySpace(init_df, self.config.ksminor_id, self.config.ksminor_name, self.config.ksminor_axis, rename=self.rename)
+    init_df = getDataFrame(init_file, ksminor_filter=self.config.ksminor_filter, ksminor_id=self.config.ksminor_id, rename=self.rename, transpose=self.config.transpose)
+    
+    ksmin_keys = None
+    if self.config.infer_units:
+      ksmin_keys = list(init_df.index)
+      units = [{"name": i, "description":""} for i in ksmin_keys]
+      self.config.units = units
+
+    self.conn.registerUnits(self.config.units)
+
+    self.minor_keyspace = self.conn.registerMinorKeySpace(init_df, self.config.ksminor_id, self.config.ksminor_name, self.config.ksminor_axis, rename=self.rename, keys=ksmin_keys)
     
     # construct first dataframe and add to list to be registered
     try:
@@ -46,7 +56,8 @@ class Importer:
 
 
     # work on the rest at once
-    parallelGen(tsv_files, self.minor_keyspace, self.config.units, self.config.db_name, self.config.ksminor_filter, self.config.ksminor_id, self.rename, host)
+    if len(tsv_files) > 0:
+      parallelGen(tsv_files, self.minor_keyspace, self.config.units, self.config.db_name, self.config.ksminor_filter, self.config.ksminor_id, self.rename, host)
 
 def poolLoadTSV((tsv, ks_minor, units, db, ksm_filter, ksm_id, rename, host)):
   """
@@ -90,7 +101,7 @@ def parallelGen(tsv_files, ks_minor, units, db, ksm_filter, ksm_id, rename, host
     raise Exception("Execution failed on {0}".format(failed))
 
 
-def getDataFrame(tsv, ksminor_filter=None, ksminor_id=None, rename=None):
+def getDataFrame(tsv, ksminor_filter=None, ksminor_id=None, rename=None, transpose=False):
   """
   Tsv to pandas dataframe, and filters if specified.
   """
@@ -109,6 +120,10 @@ def getDataFrame(tsv, ksminor_filter=None, ksminor_id=None, rename=None):
   # explore set with copy warning
   if rename:
     df.rename(columns=rename, inplace=True)
+
+  if transpose:
+    df.set_index(rename[ksminor_id], inplace=True)
+    return df.transpose()
 
   return df
 

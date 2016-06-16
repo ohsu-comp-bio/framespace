@@ -9,10 +9,6 @@ class Connector:
     Connect to specified database, and ensure proper setup.
     """
     self.conn = MongoClient(host, 27017)
-    # try:
-    #   self.conn = MongoClient(os.environ['DB_PORT_27017_TCP_ADDR'], 27017)
-    # except:
-    #   self.conn = MongoClient()
     self.db = self.conn[database]
 
     # check collections
@@ -88,17 +84,18 @@ class Connector:
     return keyspaces
 
 
-  def registerMinorKeySpace(self, df, ksminor_id, ksminor_name, ksminor_axis, rename=None):
+  def registerMinorKeySpace(self, df, ksminor_id, ksminor_name, ksminor_axis, rename=None, keys=None):
     """
     Registers a minor KeySpace, any filtering is assumed to have happened prior to registration.
     ie. ksminor_filter must occur on df before running minor ks registration.
     """
     # get keys
-    if rename is None:
-      keys = list(df[str(ksminor_name)])
-    else:
-      print 'rename flag set', rename
-      keys = list(df[str(rename[ksminor_id])])
+    if keys is None:
+      if rename is None:
+        keys = list(df[str(ksminor_name)])
+      else:
+        print 'rename flag set', rename
+        keys = list(df[str(rename[ksminor_id])])
 
     # register minor keyspace
     minor_keyspace = {"name": ksminor_name, "axis_name": ksminor_axis, "keys": keys}
@@ -115,26 +112,23 @@ class Connector:
     """
 
     # get major keyspace
+    # assumes all keys are registered
     keys = df.columns.tolist()[1:]
-    md_ks = self.keyspace.find({"keys": keys[0]})
-    if set(keys) <= set(md_ks[0]['keys']):
-      maj_dim = md_ks[0]['_id']
-    else:
-      raise ValueError("Not all keys in dimension are registered to keyspace.")
+    md_ks = self.keyspace.find_one({"keys": {"$regex": keys[0]}})
 
     # vectors are inserted into dataframe as ids to get around data storage limit
-    # print df.columns
-    # vectors = map(createVector, df.reset_index(drop=True).to_dict(orient='records'))
-    # for vec in df.reset_index(drop=True).to_dict(orient='records'):
-    # print df_dict
-    # print df_dict['key']
-    # vectors = self.vector.insert_many(df.reset_index(drop=True).to_dict(orient='records'))
-    vectors = self.vector.insert_many(map(createVector, df.reset_index(drop=True).to_dict(orient='records')))
-    dataframe = {"major": md_ks[0]['_id'], "minor": ksminor_objid, "units": units, "contents": list(vectors.inserted_ids)}
+    vectors = self.vector.insert_many(map(createVector, df.reset_index().to_dict(orient='records')))
+    dataframe = {"major": md_ks['_id'], "minor": ksminor_objid, "units": units, "contents": list(vectors.inserted_ids)}
 
     _id = self.dataframe.insert_one(dataframe)
     return _id
 
 def createVector(vector):
-  key = vector.pop('key')
+  try:
+    # get non-transposed vector
+    key = vector.pop('key')
+    del vector['index']
+  except:
+    # get transposed vector
+    key = vector.pop('index')
   return {'key': key, 'contents': vector, 'info':{}}

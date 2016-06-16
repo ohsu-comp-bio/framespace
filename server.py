@@ -246,7 +246,7 @@ def sliceDataFrame():
                  "contents": []}
       return jsonify(dataframe)
 
-    elif page_end > len(vc):
+    elif page_end > len(vc) or page_end <= len(new_minor['keys']):
       page_end = len(vc)
 
     # set filter object
