@@ -226,8 +226,8 @@ def sliceDataFrame():
     dataframe_id = request.json.get('dataframeId')
     page_start = request.json.get('pageStart', 0)
 
-    new_major = checkDimension(request.json, 'newMajor')
-    new_minor = checkDimension(request.json, 'newMinor')
+    new_major, new_major_keys = checkDimension(request.json, 'newMajor')
+    new_minor, new_minor_keys = checkDimension(request.json, 'newMinor')
 
     if dataframe_id is not None:
       result = db.dataframe.find_one({"_id": ObjectId(dataframe_id)})
@@ -246,7 +246,7 @@ def sliceDataFrame():
                  "contents": []}
       return jsonify(dataframe)
 
-    elif page_end > len(vc) or page_end <= len(new_minor['keys']):
+    elif page_end > len(vc) or page_end <= len(new_minor_keys):
       page_end = len(vc)
 
     # set filter object
@@ -254,12 +254,12 @@ def sliceDataFrame():
 
     # subset major
     if new_major is not None:
-      kmaj_keys = {"contents."+str(k):1 for k in new_major['keys']}
+      kmaj_keys = {"contents."+str(k):1 for k in new_major_keys}
       kmaj_keys['key'] = 1
 
     # subset minor
     if new_minor is not None:
-      vec_filters['key'] = {"$in": new_minor['keys']}
+      vec_filters['key'] = {"$in": new_minor_keys}
 
     vectors = db.vector.find(vec_filters, kmaj_keys)
     vectors.batch_size(1000000)
@@ -288,10 +288,10 @@ def sliceDataFrame():
 
 def checkDimension(request, dimension):
   check_dim = request.get(dimension, None)
+  check_keys = []
   if check_dim is not None:
-    if len(check_dim.get('keys', [])) <= 0:
-      return None
-  return check_dim
+    check_keys = check_dim.get('keys', [])
+  return check_dim, check_keys
 
 def nullifyToken(json):
   if json.get('nextPageToken', None) is not None:

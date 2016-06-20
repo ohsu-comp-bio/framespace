@@ -14,25 +14,23 @@ class ConfigReader:
     self.db_name = config.get('db_name', 'framespace')
     self.transpose = config.get('transpose', False)
     self.infer_units = config.get('infer_units', False)
-    print 'this is the value of transpose', self.transpose
-    print 'this is the value of infer_units', self.infer_units
 
-    # major keyspace information
-    # not required
-    self.ksmajor_map = config.get('keyspace_major', None)
-    if self.ksmajor_map is not None:
-        self.ksmajor_file = self.ksmajor_map.get('file', None)
-        self.ksmajor_name = self.ksmajor_map.get('name', None)
-        self.ksmajor_keys = self.ksmajor_map.get('keys', None)
-        self.ksmajor_axis = self.ksmajor_map.get('axis', None)
-    # self.ksmajor_tsvmap = getRequired(_ksmajor_map, 'tsv_keyspace_map')
+    # keyspace from file map and associated fields
+    self.ksf_map = config.get('keyspace_file', None)
+    if self.ksf_map is not None:
+        self.ksf_file = self.ksf_map.get('file', None)
+        self.ksf_name = self.ksf_map.get('name', None)
+        self.ksf_keys = self.ksf_map.get('keys', None)
+        # restricts all keyspaces in a file to correspond to same keyspace
+        self.ksf_axis = self.ksf_map.get('axis', None)
 
-    # minor keyspace information
-    _ksminor_map = getRequired(config, 'keyspace_minor')
-    self.ksminor_id = getRequired(_ksminor_map, 'id')
-    self.ksminor_name = getRequired(_ksminor_map, 'name')
-    self.ksminor_filter = _ksminor_map.get('filter', None)
-    self.ksminor_axis = getRequired(_ksminor_map, 'axis')
+    # embedded keyspace registration, often minor keyspace
+    self.ksemb_map = config.get('keyspace_embedded', None)
+    if self.ksemb_map is not None:
+        self.ksemb_id = self.ksemb_map.get('id', None)
+        self.ksemb_name = self.ksemb_map.get('name', None)
+        self.ksemb_filter = self.ksemb_map.get('filter', None)
+        self.ksemb_axis = self.ksemb_map.get('axis', None)
  
     # axes
     self.axes = config.get('axes', None)
@@ -44,12 +42,12 @@ class ConfigReader:
     # units
     if not self.infer_units:
         self.units = config.get('units', [])
-        if len(self.units) >= 1:
+        if len(self.units) >= 1 and self.ksemb_map is not None:
           for unit in self.units:
             getRequired(unit, 'name')
             # units require a description
             getRequired(unit, 'description')
-        else:
+        elif len(self.units) < 1 and self.ksemb_map is not None:
           raise ValueError("At least one unit must be specified.")
 
     # units

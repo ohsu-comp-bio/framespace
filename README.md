@@ -435,28 +435,28 @@ The import process uses a config file to understand how to import the specified 
 Field | Type | Required | Default | Description 
 --- | --- | --- | --- | --- | ---
 db_name | string | No | framespace | Name of mongo database to import, creates new if not existing.
-keyspace_major | dict | No | {} | Dictionary of keyspace major information. If this is set, all keyspace_major fields must be specified. Major keyspaces are created from a metadata file (see `test/data/metadata.txt`).
-keyspace_major/file | string | Conditionally | - | Path to metadata file used to create the major keyspaces.
-keyspace_major/name | string | Conditionally | - | Column name in metadata file that holds keyspace names.
-keyspace_major/keys | string | Conditionally | - | Column name in metadata file that hold the keys.
-keyspace_major/axis | string | Conditionally | - | Assign these keyspaces to this axis. 
-keyspace_minor | dict | Yes | - | Map that holds import information for the minor keyspace.
-keyspace_minor/id | string | Yes | - | Column name in tsvs to be imported which holds the minor keyspace.
-keyspace_minor/name | string | Yes | - |Name of the minor keyspace.
-keyspace_minor/filter | string | No | - | Remove this from values in the minor keyspace before creating. Often useful for genes, ie. remove genes labelled "?"
-keyspace_minor/axis | string | Yes | - | Assign this keyspace to this axis.
-axes | list | No | [] | List of axis objects to register. If empty, keyspace_minor/axis (or keyspace_major/axis) must already be registered with framespace.
+keyspace_file | dict | No | {} | Dictionary of keyspace information that is to be read from a file. If this is set, all keyspace_file fields must be specified. Keyspaces are created from a metadata file (see `test/data/metadata.txt`).
+keyspace_file/file | string | Conditionally | - | Path to metadata file used to create the keyspaces.
+keyspace_file/name | string | Conditionally | - | Column name in metadata file that holds keyspace names.
+keyspace_file/keys | string | Conditionally | - | Column name in metadata file that hold the keys.
+keyspace_file/axis | string | Conditionally | - | Assign these keyspaces to this axis. All keyspaces in the metadata file must be this keyspace.
+keyspace_embedded | dict | For dataframe registration | - | Map that holds import information for a keyspace that is embedded in a dataframe. Fields labelled conditionally below are required if this is set.
+keyspace_embedded/id | string | Conditionally | - | Column name in tsvs to be imported which holds the embedded keyspace.
+keyspace_embedded/name | string | Conditionally | - | Name of the keyspace.
+keyspace_embedded/filter | string | No | - | Remove this from values in the keyspace before creating. Often useful for genes, ie. remove genes labelled "?"
+keyspace_embedded/axis | string | Conditionally | - | Assign this keyspace to this axis.
+axes | list | No | [] | List of axis objects to register. If empty, keyspace_embedded/axis (or keyspace_file/axis) must already be registered with framespace.
 units | list | Conditionally | - | A list of at least one unit to assign to this database. Will registered only units that are not already registered (based on name).
-infer_units | bool | No | - | True if units are inferred from minor keyspace. Currently used for clinical tsvs. 
-transpose | bool | No | false | True if major keyspace is vertical.
+infer_units | bool | No | - | True if units are inferred from embedded keyspace. Currently used for clinical tsvs. 
+transpose | bool | No | false | True if embedded keyspace is vertical.
 
 ### TSV Translation
 
-The initial usage is designed to support bulk loading of a set of tsvs with variable major dimensions derived from the same axis and a consistent minor dimension. For example, the tsvs in `test/data` which have samples from various groups on the X and consistent hugo gene sets on the Y. Given the bulk entry of these as major dimensions, the keyspace information is read from a metadata file like the one in `test/data/metadata.tsv`. This setup requires keyspace_major and keyspace_minor maps defined in the import config like `test/data/import.config`. 
+The initial usage is designed to support bulk loading of a set of tsvs with variable major dimensions derived from the same axis and a consistent minor dimension. For example, the tsvs in `test/data` which have samples from various groups on the X and consistent hugo gene sets on the Y. Given the bulk entry of these as major dimensions, the keyspace information is read from a metadata file like the one in `test/data/metadata.tsv`. This setup requires keyspace_file and keyspace_embedded maps defined in the import config like `test/data/import.config`. The minor keyspace in this situation is assumed to be embedded in the dataframe.
 
 <img width="533" alt="screen shot 2016-06-16 at 11 15 50 am" align="middle" src="https://cloud.githubusercontent.com/assets/6373975/16128093/180d5fe2-33b4-11e6-846a-90c6a866732b.png">
 
-If a user wishes to upload additional tsvs associated to prexisiting keyspaces, the keyspace major object is omitted. If the minor dimension is associated to an already registerd dimension, the matrix can be transposed by setting `"transpose": true`.
+If a user wishes to upload additional tsvs associated to prexisiting keyspaces, the keyspace_file object is omitted. If the minor dimension is associated to an already registered dimension, the matrix can be transposed by setting `"transpose": true`.
 
 <img width="412" alt="screen shot 2016-06-16 at 11 16 25 am" align="middle" src="https://cloud.githubusercontent.com/assets/6373975/16128079/0eb0f378-33b4-11e6-8e9c-012076ef62b9.png">
 
