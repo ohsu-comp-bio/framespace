@@ -223,43 +223,35 @@ def sliceDataFrame():
     kmaj_keys = None
     kmin_keys = None
 
-    dataframe_id = request.json.get('dataframeId')
-    page_start = request.json.get('pageStart', 0)
+    # validate request
+    jreq = fromJson(json.dumps(request.json), services.SliceDataFrameRequest)
 
-    new_major, new_major_keys = checkDimension(request.json, 'newMajor')
-    new_minor, new_minor_keys = checkDimension(request.json, 'newMinor')
-
-    if dataframe_id is not None:
-      result = db.dataframe.find_one({"_id": ObjectId(dataframe_id)})
-    else:
-      return "DataFrame ID Required for SliceDataFrameRequest."
+    # first request to dataframe
+    result = db.dataframe.find_one({"_id": ObjectId(str(jreq.dataframe_id))})
 
     # prep vector query
     vc = result.get('contents', [])
-    page_end = request.json.get('pageEnd', len(vc))
 
     # if page start is outside of dataframe length, return empty
-    if page_start > len(vc):
+    if jreq.page_start > len(vc):
       dataframe = {"id": str(result["_id"]), \
                  "major": {"keyspaceId": str(result['major']), "keys": []}, \
                  "minor": {"keyspaceId": str(result['minor']), "keys": []}, \
                  "contents": []}
       return jsonify(dataframe)
 
-    elif page_end > len(vc) or page_end <= len(new_minor_keys):
-      page_end = len(vc)
+    elif jreq.page_end > len(vc) or (jreq.page_end <= len(jreq.new_minor.keys) and len(jreq.new_minor.keys) != 0):
+      jreq.page_end = len(vc)
 
-    # set filter object
-    vec_filters["_id"] = {"$in": vc[page_start:page_end]}
 
-    # subset major
-    if new_major is not None:
-      kmaj_keys = {"contents."+str(k):1 for k in new_major_keys}
+    vec_filters["_id"] = {"$in": vc[jreq.page_start:jreq.page_end]}
+
+    if len(jreq.new_major.keys) > 0:
+      kmaj_keys = {"contents."+str(k):1 for k in jreq.new_major.keys}
       kmaj_keys['key'] = 1
 
-    # subset minor
-    if new_minor is not None:
-      vec_filters['key'] = {"$in": new_minor_keys}
+    if len(jreq.new_minor.keys) > 0:
+      vec_filters['key'] = {"$in": jreq.new_minor.keys}
 
     vectors = db.vector.find(vec_filters, kmaj_keys)
     vectors.batch_size(1000000)
@@ -269,10 +261,10 @@ def sliceDataFrame():
 
     # avoid invalid keys passing through to keys
     # explore impacts on response time
-    if new_major is not None:
+    if len(jreq.new_major.keys) > 0:
       kmaj_keys = contents[contents.keys()[0]].keys()
 
-    if new_minor is not None:
+    if len(jreq.new_minor.keys) > 0:
       kmin_keys = contents.keys()
 
     dataframe = {"id": str(result["_id"]), \
@@ -284,7 +276,6 @@ def sliceDataFrame():
 
   except Exception:
     return "Invalid SliceDataFrameRequest\n"
-
 
 def checkDimension(request, dimension):
   check_dim = request.get(dimension, None)
