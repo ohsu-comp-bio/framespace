@@ -117,7 +117,6 @@ def getDataFrame(tsv, ksminor_filter=None, ksminor_id=None, rename=None, transpo
   # explore set with copy warning
   if rename:
     df = df.rename(columns=rename)
-    print 'here?'
 
   if transpose:
     df.set_index(rename[ksminor_id], inplace=True)
