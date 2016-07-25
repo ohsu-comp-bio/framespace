@@ -241,7 +241,7 @@ def sliceDataFrame():
                  "contents": []}
       return jsonify(dataframe)
 
-    elif jreq.page_end > len(vc) or len(jreq.new_minor.keys) > 0:
+    elif jreq.page_end > len(vc) or len(jreq.new_minor.keys) > 0 or jreq.page_end == 0:
       jreq.page_end = len(vc)
 
     # construct vector filters
