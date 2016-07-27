@@ -4,8 +4,7 @@ from flask import Flask, request, jsonify
 from pymongo import MongoClient
 from bson import ObjectId
 
-from proto.framespace import framespace_pb2 as models
-from proto.framespace import framespace_service_pb2 as services
+from proto.framespace import framespace_pb2 as fs
 
 # used for development
 #from google.protobuf import json_format
@@ -31,7 +30,7 @@ def searchAxes():
 
   try:
     # get proto, validates
-    jreq = util.fromJson(json.dumps(req), services.SearchAxesRequest)
+    jreq = util.fromJson(json.dumps(req), fs.SearchAxesRequest)
 
     # query backend
     if len(jreq.names) > 0:
@@ -40,7 +39,7 @@ def searchAxes():
       result = db.axis.find()
 
     # make proto
-    _protoresp = services.SearchAxesResponse()
+    _protoresp = fs.SearchAxesResponse()
     for r in result:
       _protoresp.axes.add(name=r['name'], description=r['description'])
 
@@ -63,7 +62,7 @@ def searchUnits():
   try:
 
     # get proto, validates
-    jreq = util.fromJson(json.dumps(req), services.SearchUnitsRequest)
+    jreq = util.fromJson(json.dumps(req), fs.SearchUnitsRequest)
 
     filters = {}
     # query backend
@@ -79,7 +78,7 @@ def searchUnits():
       result = db.units.find()
 
     # make proto
-    _protoresp = services.SearchUnitsResponse()
+    _protoresp = fs.SearchUnitsResponse()
     for r in result:
       _protoresp.units.add(name=r['name'], description=r['description'], id=str(r['_id']))
 
@@ -105,7 +104,7 @@ def searchKeySpaces():
   try:
 
     # get proto, validates
-    jreq = util.fromJson(json.dumps(request.json), services.SearchKeySpacesRequest)
+    jreq = util.fromJson(json.dumps(request.json), fs.SearchKeySpacesRequest)
 
     # handle masks
     mask = util.setMask(jreq.keys, unicode('mask'), "keys")
@@ -130,7 +129,7 @@ def searchKeySpaces():
       result = db.keyspace.find()
 
     # make proto
-    _protoresp = services.SearchKeySpacesResponse()
+    _protoresp = fs.SearchKeySpacesResponse()
     for r in result:
       if r.get('keys', None) is None:
         r['keys'] = []
@@ -160,7 +159,7 @@ def searchDataFrames():
   try:
 
     # get proto, validates
-    jreq = util.fromJson(json.dumps(request.json), services.SearchDataFramesRequest)
+    jreq = util.fromJson(json.dumps(request.json), fs.SearchDataFramesRequest)
 
     # handle masks, ommitting contents from endpoint
     mask_contents = {"contents": 0}
@@ -182,18 +181,18 @@ def searchDataFrames():
       result = db.dataframe.find({}, mask_contents)
 
     # make proto
-    _protoresp = services.SearchDataFramesResponse(dataframes=[])
+    _protoresp = fs.SearchDataFramesResponse(dataframes=[])
     for r in result:
       kmaj_name, kmaj_keys = util.getKeySpaceInfo(db, r['major'], mask_keys)
       kmin_name, kmin_keys = util.getKeySpaceInfo(db, r['minor'], mask_keys)
 
-      dataframe = models.DataFrame(id=str(r['_id']), \
-        major=models.Dimension(keyspace_id=str(r['major']), keys=kmaj_keys), \
-        minor=models.Dimension(keyspace_id=str(r['minor']), keys=kmin_keys), \
+      dataframe = fs.DataFrame(id=str(r['_id']), \
+        major=fs.Dimension(keyspace_id=str(r['major']), keys=kmaj_keys), \
+        minor=fs.Dimension(keyspace_id=str(r['minor']), keys=kmin_keys), \
         units=[], contents=[])
 
       for unit in r['units']:
-        dataframe.units.extend([models.Unit(name=unit['name'], \
+        dataframe.units.extend([fs.Unit(name=unit['name'], \
                                             description=unit['description'])])
 
       _protoresp.dataframes.extend([dataframe])
@@ -224,7 +223,7 @@ def sliceDataFrame():
     vec_filters = {}
 
     # validate request
-    jreq = util.fromJson(json.dumps(request.json), services.SliceDataFrameRequest)
+    jreq = util.fromJson(json.dumps(request.json), fs.SliceDataFrameRequest)
 
     # first request to get dataframe
     result = db.dataframe.find_one({"_id": ObjectId(str(jreq.dataframe_id))})
@@ -242,7 +241,7 @@ def sliceDataFrame():
                  "contents": []}
       return jsonify(dataframe)
 
-    elif jreq.page_end > len(vc) or len(jreq.new_minor.keys) > 0:
+    elif jreq.page_end > len(vc) or len(jreq.new_minor.keys) > 0 or jreq.page_end == 0:
       jreq.page_end = len(vc)
 
     # construct vector filters
