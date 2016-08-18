@@ -48,6 +48,26 @@ def searchAxes():
   except Exception:
     return "Invalid SearchAxesRequest\n"
 
+@app.route('/axes', methods = ['GET'])
+def axes():
+  """
+  GET /axes
+  Return all axes
+  """
+  try:
+    result = db.axis.find()
+
+    # make proto
+    _protoresp = fs.SearchAxesResponse()
+    for r in result:
+      _protoresp.axes.add(name=r['name'], description=r['description'])
+
+    return util.toFlaskJson(_protoresp)
+
+  except Exception:
+    return "Error while processing request.\n"
+
+
 
 @app.route('/units/search', methods = ['POST'])
 def searchUnits():
@@ -283,6 +303,7 @@ def sliceDataFrame():
 
   except Exception:
     return "Invalid SliceDataFrameRequest\n"
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
