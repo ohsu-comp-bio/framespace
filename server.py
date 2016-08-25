@@ -45,8 +45,8 @@ def searchAxes():
 
     return util.toFlaskJson(_protoresp)
 
-  except Exception:
-    return "Invalid SearchAxesRequest\n"
+  except Exception as e:
+    return "".join([str(e), "\n"])
 
 @app.route('/axes', methods = ['GET'])
 def axes():
@@ -64,9 +64,28 @@ def axes():
 
     return util.toFlaskJson(_protoresp)
 
-  except Exception:
-    return "Error while processing request.\n"
+  except Exception as e:
+    return "".join([str(e), "\n"])
 
+@app.route('/axes/<name>', methods= ['GET'])
+def axesName(name):
+  """
+  GET /axes/name
+  Return axis with a given name
+  """
+  try:
+    result = db.axis.find_one({"name": str(name)})
+
+    _axis = fs.Axis()
+
+    if result:
+      _axis = fs.Axis(name=result['name'], description=result['description'])
+      return util.toFlaskJson(_axis)
+
+    return jsonify({})
+
+  except Exception as e:
+    return "".join([str(e), "\n"])
 
 
 @app.route('/units/search', methods = ['POST'])
@@ -104,8 +123,49 @@ def searchUnits():
 
     return util.toFlaskJson(_protoresp)
 
-  except Exception:
-    return "Invalid SearchUnitsRequest\n"
+  except Exception as e:
+    return "".join([str(e), "\n"])
+
+
+@app.route('/units', methods = ['GET'])
+def units():
+  """
+  GET /units
+  Return all units
+  """
+  try:
+    result = db.units.find()
+
+    # make proto
+    _protoresp = fs.SearchUnitsResponse()
+    for r in result:
+      _protoresp.units.add(id=str(r['_id']), name=r['name'], description=r['description'])
+
+    return util.toFlaskJson(_protoresp)
+
+  except Exception as e:
+    return "".join([str(e), "\n"])
+
+
+@app.route('/units/<unit_id>', methods = ['GET'])
+def unitsId(unit_id):
+  """
+  GET /units/{unit_id}
+  Return unit with the give id
+  """
+  try:
+    result = db.units.find_one({"_id": ObjectId(unit_id)})
+
+    # make proto
+    if result:
+      _unit = fs.Unit(id=str(result['_id']), name=result['name'], description=result['description'])
+      return util.toFlaskJson(_unit)
+    else:
+      return jsonify({})
+
+  except Exception as e:
+    return "".join([str(e), "\n"])
+
 
 
 @app.route('/keyspaces/search', methods = ['POST'])
@@ -157,8 +217,8 @@ def searchKeySpaces():
 
     return util.toFlaskJson(_protoresp)
 
-  except Exception:
-    return "Invalid SearchKeySpacesRequest\n"
+  except Exception as e:
+    return "".join([str(e), "\n"])
 
 
 @app.route('/dataframes/search', methods=['POST'])
@@ -219,8 +279,8 @@ def searchDataFrames():
 
     return util.toFlaskJson(_protoresp)
 
-  except Exception:
-    return "Invalid SearchDataFramesRequest\n"
+  except Exception as e:
+    return "".join([str(e), "\n"])
 
 
 @app.route('/dataframe/slice', methods = ['POST'])
@@ -301,8 +361,8 @@ def sliceDataFrame():
 
     return jsonify(dataframe)
 
-  except Exception:
-    return "Invalid SliceDataFrameRequest\n"
+  except Exception as e:
+    return "".join([str(e), "\n"])
 
 
 if __name__ == '__main__':
