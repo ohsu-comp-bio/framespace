@@ -26,6 +26,7 @@ def searchAxes():
   { "names" : ["gene"] }
   """
   # validate request
+  # utils.authenticate(request)
   req = util.getRequest(request)
 
   try:
@@ -167,7 +168,6 @@ def unitsId(unit_id):
     return "".join([str(e), "\n"])
 
 
-
 @app.route('/keyspaces/search', methods = ['POST'])
 def searchKeySpaces():
   """
@@ -228,7 +228,6 @@ def searchDataFrames():
   Search for dataframes in FrameSpace registered to a given keyspace. 
   Contents omitted in return for clarity.
   """
-
   if not request.json:
     return "Bad content type, must be application/json\n"
 

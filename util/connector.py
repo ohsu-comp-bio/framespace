@@ -101,20 +101,22 @@ class Connector:
 
 
   def registerDataFrame(self, df, ksminor_objid, units):
+  # def registerVectors(self, df, ksminor_objid, units):
     """
     Gets respecitve major keyspace.
     Registers the lines of the tsv file as vectors.
     Register the tsv as a dataframe with pointer to vectors.
     """
-
+    from itertools import repeat
     # get major keyspace
     # assumes all keys are registered
     keys = df.columns.tolist()[1:]
     md_ks = self.keyspace.find_one({"keys": {"$regex": keys[0]}})
+    print ksminor_objid
 
     if md_ks is not None:
       # vectors are inserted into dataframe as ids to get around data storage limit
-      vectors = self.vector.insert_many(map(createVector, df.reset_index().to_dict(orient='records')))
+      vectors = self.vector.insert_many(map(createVectorClos(md_ks['_id'], ksminor_objid, units), df.reset_index().to_dict(orient='records')))
       dataframe = {"major": md_ks['_id'], "minor": ksminor_objid, "units": units, "contents": list(vectors.inserted_ids)}
 
       _id = self.dataframe.insert_one(dataframe)
@@ -122,7 +124,7 @@ class Connector:
     else:
       raise ValueError("KeySpace must be registered before registering dataframe.")
 
-def createVector(vector):
+def createVector(major, minor, units, vector):
   try:
     # get non-transposed vector
     key = vector.pop('key')
@@ -130,4 +132,9 @@ def createVector(vector):
   except:
     # get transposed vector
     key = vector.pop('index')
-  return {'key': key, 'contents': vector, 'info':{}}
+  return {'key': key, 'contents': vector, 'info':{}, 'majks': major, 'minks': minor, 'units':units}
+
+def createVectorClos(major, minor, units):
+  def f(vector):
+      return createVector(major, minor, units, vector)
+  return f
