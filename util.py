@@ -51,3 +51,16 @@ def getRequest(request, return_json={"names":[]}):
     return "Bad content type, must be application/json\n"
 
   return request.json
+
+def authenticate(request):
+  token = request.headers.get('authorization', None)
+  return str(token)
+
+def handle_arg(key, value):
+  # handle ids
+  if key == 'id':
+    key = '_'+key
+    return key, ObjectId(value)
+  else:
+    return key, value
+
