@@ -6,6 +6,7 @@ import os
 from pymongo import MongoClient
 
 from api.units import Units
+from api.axes import Axis, Axes
 
 # app = Flask(__name__)
 # name passed to flask app will bind to db
@@ -20,6 +21,8 @@ except:
 
 db = mongo['framespace']
 
+api.add_resource(Axes, '/axes', '/axes/search', resource_class_kwargs={'db': db})
+api.add_resource(Axis, '/axes/<name>', resource_class_kwargs={'db': db})
 api.add_resource(Units, '/units', '/units/search', resource_class_kwargs={'db': db})
 
 if __name__ == '__main__':
