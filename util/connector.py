@@ -100,7 +100,7 @@ class Connector:
     minor_keyspace = {"name": ksminor_name, "axis_name": ksminor_axis, "keys": keys}
     min_ks = self.keyspace.update({"name": ksminor_name, "axis_name": ksminor_axis}, minor_keyspace, upsert=True)
 
-    return min_ks.get("upserted", self.keyspace.find_one({"name": ksminor_name, "axis_name": ksminor_axis}))
+    return min_ks.get("upserted", self.keyspace.find_one({"name": ksminor_name, "axis_name": ksminor_axis})['_id'])
 
 
   def registerDataFrame(self, df, ksminor_objid, units):
