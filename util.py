@@ -25,7 +25,12 @@ def fromJson(json, protoClass):
     """
     return json_format.Parse(json, protoClass())
 
-def getMongoFieldFilter(filterList, maptype):
+def getMongoFieldFilter(filterList, maptype, from_get=False):
+
+  # catch GET calls
+  if from_get:
+    filterList = filterList[0].split(',')
+
   try:
     return {"$in": map(maptype, filterList)}
   except:

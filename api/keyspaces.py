@@ -6,7 +6,6 @@ from bson import ObjectId
 import util as util
 from proto.framespace import framespace_pb2 as fs
 
-# /keyspaces/<axis_name>/<keyspace_name>
 
 class KeySpace(Resource):
   """
@@ -81,7 +80,7 @@ class KeySpaces(Resource):
       if request.args.get('names', None):
         filters['name'] = util.getMongoFieldFilter(request.args.get('names').split(','), str)
       
-      if request.args.get('keySpaceIds', None):
+      if request.args.get('keyspaceIds', None):
         filters['_id'] = util.getMongoFieldFilter(request.args.get('keySpaceIds').split(','), ObjectId)
       
       # add check here for case where name and id are both $or
@@ -92,11 +91,7 @@ class KeySpaces(Resource):
         if len(keys) > 0:
           filters['keys'] = util.getMongoFieldFilter(keys, str)
 
-      print filters
-      print mask
-      print keys
       result = self.db.keyspace.find(filters, mask)
-      print result.count()
 
       # make proto
       _protoresp = fs.SearchKeySpacesResponse()

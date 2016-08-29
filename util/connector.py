@@ -53,8 +53,11 @@ class Connector:
     Register any newly specified units.
     Units is a required field in the config, so no checking is necessary.
     """
+    registeredUnits = []
     for unit in units:
-      self.units.update({'name': unit['name']}, unit, upsert=True)
+      u = self.units.update({'name': unit['name']}, unit, upsert=True)
+      registeredUnits.append(u['upserted'])
+    return registeredUnits
 
 
   def registerKeyspaceFile(self, metadata, name, keys, axis):
@@ -74,7 +77,7 @@ class Connector:
       for ks in kspaces:
         ks_df = m_df[m_df[name].str.contains(ks)]
         key_list = list(ks_df[keys])
-        ks_obj = {'name': ks, 'axis_name': axis, 'keys': key_list}
+        ks_obj = {'name': ks.replace('.','-'), 'axis_name': axis, 'keys': key_list}
         self.keyspace.update({'name': ks, 'axis_name': axis}, ks_obj, upsert=True)
 
       del m_df
