@@ -29,6 +29,7 @@ class Units(Resource):
     for arg in request.args:
       value = request.args.get(arg, None)
       if value:
+        # handle args for _id field
         k, v = util.handle_arg(arg, value)
         filt[k] = v
 
