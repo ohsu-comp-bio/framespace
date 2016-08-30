@@ -6,6 +6,7 @@ from bson import ObjectId
 import util as util
 from proto.framespace import framespace_pb2 as fs
 from google.protobuf import json_format
+import pandas as pd
 
 class DataFrame(Resource):
   """
@@ -36,13 +37,9 @@ class DataFrame(Resource):
     """
     GET /dataframe/<dataframe_id>
     """
-    d = {'dataframeId': dataframe_id}
-    for arg in request.args:
-      if arg[:4] == 'page':
-        d[str(arg)] = int(request.args[arg][0])
-      if arg[:3] == 'new':
-        d[str(arg)] = {'keys': request.args[arg].split(',')}
-    return self.sliceDataFrame(json.dumps(d))
+    transpose = bool(request.args.get('transpose', False))
+    request_args = self.translateGetArgs(request, dataframe_id)
+    return self.sliceDataFrame(json.dumps(request_args), transpose=transpose)
 
 
   def post(self):
@@ -60,7 +57,8 @@ class DataFrame(Resource):
 
     return self.sliceDataFrame(json.dumps(request.json))
 
-  def sliceDataFrame(self, request):
+
+  def sliceDataFrame(self, request, transpose=False):
 
     try:
 
@@ -92,13 +90,17 @@ class DataFrame(Resource):
       # construct vector filters
       vec_filters["_id"] = {"$in": vc[jreq.page_start:jreq.page_end]}
 
-      kmaj_keys = None
-      if len(jreq.new_major.keys) > 0:
-        kmaj_keys = {"contents."+str(k):1 for k in jreq.new_major.keys}
-        kmaj_keys['key'] = 1
+      # kmaj_keys = None
+      # if len(jreq.new_major.keys) > 0:
+      #   kmaj_keys = {"contents."+str(k):1 for k in jreq.new_major.keys}
+      #   kmaj_keys['key'] = 1
 
-      if len(jreq.new_minor.keys) > 0:
-        vec_filters['key'] = {"$in": map(str, jreq.new_minor.keys)}
+      # if len(jreq.new_minor.keys) > 0:
+      #   vec_filters['key'] = {"$in": map(str, jreq.new_minor.keys)}
+      if not transpose:
+        kmaj_keys = self.setDimensionFilters(jreq.new_major.keys, jreq.new_minor.keys, vec_filters)
+      else:
+        kmaj_keys = self.setDimensionFilters(jreq.new_minor.keys, jreq.new_major.keys, vec_filters)
 
       # seconrd query to backend to get contents
       vectors = self.db.vector.find(vec_filters, kmaj_keys)
@@ -106,6 +108,10 @@ class DataFrame(Resource):
       # construct response
 
       contents = {vector["key"]:vector["contents"] for vector in vectors}
+      if transpose:
+        # this is the overhead
+        d = pd.DataFrame.from_dict(contents, orient="index")
+        contents = d.to_dict()
 
       # avoid invalid keys passing through to keys
       # explore impacts on response time
@@ -128,3 +134,39 @@ class DataFrame(Resource):
 
     except Exception as e:
       return jsonify({500: str(e)})
+
+  def setDimensionFilters(self, major_keys, minor_keys, vec_filters):
+    kmaj_keys = None
+    if len(major_keys) > 0:
+      kmaj_keys = {"contents."+str(k):1 for k in major_keys}
+      kmaj_keys['key'] = 1
+
+    if len(minor_keys) > 0:
+      vec_filters['key'] = {"$in": map(str, minor_keys)}
+
+    return kmaj_keys
+
+  def translateGetArgs(self, request, dataframe_id):
+    """
+    Handles json building for get args, for json <-> pb support
+    """
+    d = {'dataframeId': dataframe_id}
+    for arg in request.args:
+      if arg[:4] == 'page':
+        d[str(arg)] = int(request.args[arg][0])
+      if arg[:3] == 'new':
+        d[str(arg)] = {'keys': request.args[arg].split(',')}
+    return d
+
+
+class Transpose(DataFrame):
+  """
+  Class for Translating DataFrame Resource
+  """
+
+  def __init__(self, db):
+    self.db = db
+
+  def get(self, dataframe_id):
+    request_args = self.translateGetArgs(request, dataframe_id)
+    return self.sliceDataFrame(json.dumps(request_args), transpose=True)
