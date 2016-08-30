@@ -54,11 +54,10 @@ class DataFrames(Resource):
 
       # get proto, validates
       jreq = util.fromJson(request, fs.SearchDataFramesRequest)
-      print json_format._MessageToJsonObject(jreq, True)
 
       # handle masks, ommitting contents from endpoint
       mask_contents = {"contents": 0}
-      mask_keys = util.setMask(jreq.keyspace_ids, unicode('mask-keys'), 'keys')
+      mask_keys = None
 
       # handle filters
       filters = {}
@@ -66,15 +65,16 @@ class DataFrames(Resource):
         filters['_id'] = util.getMongoFieldFilter(jreq.dataframe_ids, ObjectId, from_get=from_get)
 
       if len(jreq.keyspace_ids) > 0:
-        filters['$or'] = [{'major': util.getMongoFieldFilter(jreq.keyspace_ids, ObjectId, from_get=from_get)}]
-        filters['$or'].append({'minor': util.getMongoFieldFilter(jreq.keyspace_ids, ObjectId, from_get=from_get)})
+        # grab keys mask
+        keyspace_ids = jreq.keyspace_ids[0].split(',')
+        mask_keys = util.setMask(keyspace_ids, unicode('mask-keys'), 'keys')
+        # process keyspace ids
+        if len(keyspace_ids) > 0:
+          filters['$or'] = [{'major': util.getMongoFieldFilter(keyspace_ids, ObjectId, from_get=from_get)}]
+          filters['$or'].append({'minor': util.getMongoFieldFilter(keyspace_ids, ObjectId, from_get=from_get)})
 
       # query backend
-      if len(filters) > 0:
-        result = self.db.dataframe.find(filters, mask_contents)
-      else:
-        result = self.db.dataframe.find({}, mask_contents)
-
+      result = self.db.dataframe.find(filters, mask_contents)
       # make proto
       _protoresp = fs.SearchDataFramesResponse(dataframes=[])
       for r in result:

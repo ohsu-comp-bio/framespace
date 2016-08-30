@@ -9,6 +9,7 @@ from api.units import Units
 from api.axes import Axis, Axes
 from api.keyspaces import KeySpace, KeySpaces
 from api.dataframes import DataFrames
+from api.dataframe import DataFrame
 
 # app = Flask(__name__)
 # name passed to flask app will bind to db
@@ -29,6 +30,7 @@ api.add_resource(Units, '/units', '/units/search', resource_class_kwargs={'db': 
 api.add_resource(KeySpace, '/keyspaces/<axis_name>/<name>', resource_class_kwargs={'db': db})
 api.add_resource(KeySpaces, '/keyspaces', '/keyspaces/search', resource_class_kwargs={'db': db})
 api.add_resource(DataFrames, '/dataframes', '/dataframes/search', resource_class_kwargs={'db': db})
+api.add_resource(DataFrame, '/dataframe/<dataframe_id>', '/dataframe/slice', resource_class_kwargs={'db': db})
 
 
 if __name__ == '__main__':

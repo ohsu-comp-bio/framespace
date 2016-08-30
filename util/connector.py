@@ -115,7 +115,6 @@ class Connector:
     # assumes all keys are registered
     keys = df.columns.tolist()[1:]
     md_ks = self.keyspace.find_one({"keys": {"$regex": keys[0]}})
-    print ksminor_objid
 
     if md_ks is not None:
       # vectors are inserted into dataframe as ids to get around data storage limit
