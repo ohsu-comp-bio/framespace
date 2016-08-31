@@ -28,7 +28,7 @@ class DataFrames(Resource):
     """
     GET /dataframes
     """
-    return self.searchDataFrames(json.dumps(dict(request.args)), from_get=True)
+    return self.searchDataFrames(dict(request.args), from_get=True)
 
 
   def post(self):
@@ -37,23 +37,21 @@ class DataFrames(Resource):
     Search for dataframes in FrameSpace registered to a given keyspace. 
     Contents omitted in return for clarity.
     """
-    if not request.json:
-      return "Bad content type, must be application/json\n"
-
-    check_ks = request.json.get('keyspaceIds', None)
-    if check_ks is None or (len(check_ks) == 1 and check_ks[0] == unicode('mask-keys')):
-      return 'keyspaceIds required when searching dataframes.\n'
-
-    return self.searchDataFrames(json.dumps(request.json))
+    return self.searchDataFrames(request.json)
 
   def searchDataFrames(self, request, from_get=False):
     """
     DataFrame Search Function
     """
+    # enforce project level access control by enforcing restrictions on keyspaces
+    check_ks = request.get('keyspaceIds', None)
+    if check_ks is None or (len(check_ks) == 1 and check_ks[0] == unicode('mask-keys')):
+      return jsonify({500: 'keyspaceIds required when searching dataframes'})
+
     try:
 
       # get proto, validates
-      jreq = util.fromJson(request, fs.SearchDataFramesRequest)
+      jreq = util.fromJson(json.dumps(request), fs.SearchDataFramesRequest)
 
       # handle masks, ommitting contents from endpoint
       mask_contents = {"contents": 0}
@@ -97,4 +95,4 @@ class DataFrames(Resource):
       return util.toFlaskJson(_protoresp)
 
     except Exception as e:
-      return str(e)
+      return jsonify({500: str(e)})

@@ -90,13 +90,6 @@ class DataFrame(Resource):
       # construct vector filters
       vec_filters["_id"] = {"$in": vc[jreq.page_start:jreq.page_end]}
 
-      # kmaj_keys = None
-      # if len(jreq.new_major.keys) > 0:
-      #   kmaj_keys = {"contents."+str(k):1 for k in jreq.new_major.keys}
-      #   kmaj_keys['key'] = 1
-
-      # if len(jreq.new_minor.keys) > 0:
-      #   vec_filters['key'] = {"$in": map(str, jreq.new_minor.keys)}
       if not transpose:
         kmaj_keys = self.setDimensionFilters(jreq.new_major.keys, jreq.new_minor.keys, vec_filters)
       else:
