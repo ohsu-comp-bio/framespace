@@ -55,8 +55,15 @@ class Connector:
     """
     registeredUnits = []
     for unit in units:
-      u = self.units.update({'name': unit['name']}, unit, upsert=True)
-      registeredUnits.append(u['upserted'])
+      u = self.units.find_and_modify({'name': unit['name']}, unit, upsert=True, full_response=True)
+      try:
+        # registered new unit
+        _id = u['lastErrorObject']['upserted']
+      except:
+        # updated unit
+        _id = u['value']['_id']
+
+      registeredUnits.append(_id)
     return registeredUnits
 
 
