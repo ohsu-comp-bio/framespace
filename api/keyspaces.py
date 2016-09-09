@@ -1,11 +1,22 @@
 from flask import request, jsonify
-from flask_restful import Resource
+from flask_restful import Resource, abort
 import json
 from bson import ObjectId
 
 import util as util
 from proto.framespace import framespace_pb2 as fs
 
+from util.ccc_auth import validateRulesEngine
+from functools import wraps
+
+def validate(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+      if not validateRulesEngine(request):
+        return abort(401)
+      print args, kwargs
+      return func(*args, **kwargs)
+    return wrapper
 
 class KeySpace(Resource):
   """
@@ -23,6 +34,8 @@ class KeySpace(Resource):
   def __init__(self, db):
     self.db = db
 
+
+  @validate
   def get(self, keyspace_id):
       """
       GET /keyspaces/<keyspace_id>
@@ -32,7 +45,6 @@ class KeySpace(Resource):
         mask = None
         if bool(request.args.get('mask', False)):
           mask = {'keys': 0}
-
 
         result = self.db.keyspace.find_one({"_id": ObjectId(keyspace_id)}, mask)
 
@@ -67,11 +79,12 @@ class KeySpaces(Resource):
   def __init__(self, db):
     self.db = db
 
-
+  @validate
   def get(self):
     """
     GET /keyspaces?axisNames=...&keySpaceIds=...&names=...&keys=...
     """
+    # handle keys args
     return self.searchKeySpaces(dict(request.args))
 
   def post(self):

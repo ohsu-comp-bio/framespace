@@ -1,10 +1,20 @@
 from flask import request, jsonify
-from flask_restful import Resource
+from flask_restful import Resource, abort
 import json
 from bson import ObjectId
 
 import util as util
 from proto.framespace import framespace_pb2 as fs
+# from util.ccc_auth import validateRulesEngine
+from functools import wraps
+
+def validate(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+      if not util.ccc_auth.validateRulesEngine(request):
+        return abort(401)
+      return func(*args, **kwargs)
+    return wrapper
 
 class Axis(Resource):
   """
@@ -15,11 +25,12 @@ class Axis(Resource):
     string description = 2;
   } 
   """
+  # decorators = [checkuserfun('test')]
 
   def __init__(self, db):
     self.db = db
 
-
+  @validate
   def get(self, name):
     """
     GET /axes/name

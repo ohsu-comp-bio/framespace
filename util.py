@@ -37,6 +37,7 @@ def getMongoFieldFilter(filterList, maptype, from_get=False):
     return None
 
 def setMask(request_list, identifier, mask):
+
   if identifier in request_list:
     request_list.remove(identifier)
     return {mask: 0}
