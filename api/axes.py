@@ -5,16 +5,6 @@ from bson import ObjectId
 
 import util as util
 from proto.framespace import framespace_pb2 as fs
-# from util.ccc_auth import validateRulesEngine
-from functools import wraps
-
-def validate(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-      if not util.ccc_auth.validateRulesEngine(request):
-        return abort(401)
-      return func(*args, **kwargs)
-    return wrapper
 
 class Axis(Resource):
   """
@@ -30,7 +20,6 @@ class Axis(Resource):
   def __init__(self, db):
     self.db = db
 
-  @validate
   def get(self, name):
     """
     GET /axes/name
