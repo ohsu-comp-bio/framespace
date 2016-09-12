@@ -15,7 +15,6 @@ class Axis(Resource):
     string description = 2;
   } 
   """
-  # decorators = [checkuserfun('test')]
 
   def __init__(self, db):
     self.db = db
@@ -56,21 +55,8 @@ class Axes(Resource):
     GET /axes
     Return all axes
     """
-    try:
-      if request.args.get('names', None):
-        result = self.db.axis.find({"name": util.getMongoFieldFilter(request.args.get('names').split(','), str)})
-      else:
-        result = self.db.axis.find()
 
-      # make proto
-      _protoresp = fs.SearchAxesResponse()
-      for r in result:
-        _protoresp.axes.add(name=r['name'], description=r['description'])
-
-      return util.toFlaskJson(_protoresp)
-
-    except Exception as e:
-      return "".join([str(e), "\n"])
+    return self.axesSearch(dict(request.args), from_get=True)
 
   def post(self):
     """
@@ -80,14 +66,17 @@ class Axes(Resource):
 
     # validate request
     req = util.getRequest(request)
+    return self.axesSearch(req)
+
+  def axesSearch(self, request, from_get=False):
 
     try:
       # get proto, validates
-      jreq = util.fromJson(json.dumps(req), fs.SearchAxesRequest)
+      jreq = util.fromJson(json.dumps(request), fs.SearchAxesRequest)
 
       # query backend
       if len(jreq.names) > 0:
-        result = self.db.axis.find({"name": util.getMongoFieldFilter(jreq.names, str)})
+        result = self.db.axis.find({"name": util.getMongoFieldFilter(jreq.names, str, from_get=from_get)})
       else:
         result = self.db.axis.find()
 
@@ -100,3 +89,4 @@ class Axes(Resource):
 
     except Exception as e:
       return "".join([str(e), "\n"])
+

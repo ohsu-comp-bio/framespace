@@ -5,7 +5,7 @@ from functools import wraps
 
 from pymongo import MongoClient
 
-from api.units import Units
+from api.units import Units, Unit
 from api.axes import Axis, Axes
 from api.keyspaces import KeySpace, KeySpaces
 from api.dataframes import DataFrames
@@ -27,6 +27,7 @@ db = mongo['framespace']
 api.add_resource(Axes, '/axes', '/axes/search', resource_class_kwargs={'db': db})
 api.add_resource(Axis, '/axes/<name>', resource_class_kwargs={'db': db})
 api.add_resource(Units, '/units', '/units/search', resource_class_kwargs={'db': db})
+api.add_resource(Unit, '/units/<name>', resource_class_kwargs={'db': db})
 api.add_resource(KeySpace, '/keyspaces/<keyspace_id>', resource_class_kwargs={'db': db})
 api.add_resource(KeySpaces, '/keyspaces', '/keyspaces/search', resource_class_kwargs={'db': db})
 api.add_resource(DataFrames, '/dataframes', '/dataframes/search', resource_class_kwargs={'db': db})

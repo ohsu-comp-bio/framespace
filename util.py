@@ -62,11 +62,3 @@ def authenticate(request):
   token = request.headers.get('authorization', None)
   return str(token)
 
-def handle_arg(key, value):
-  # handle ids
-  if key == 'id':
-    key = '_'+key
-    return key, ObjectId(value)
-  else:
-    return key, value
-
