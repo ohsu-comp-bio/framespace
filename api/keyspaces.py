@@ -6,6 +6,17 @@ from bson import ObjectId
 import util as util
 from proto.framespace import framespace_pb2 as fs
 
+from ccc_auth import validateRulesEngine
+from functools import wraps
+
+def validate(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+      if not validateRulesEngine(request):
+        return abort(401)
+      return func(*args, **kwargs)
+    return wrapper
+
 class KeySpace(Resource):
   """
   API Resource that describes a single keyspace.
@@ -22,6 +33,7 @@ class KeySpace(Resource):
   def __init__(self, db):
     self.db = db
 
+  @validate
   def get(self, keyspace_id):
       """
       GET /keyspaces/<keyspace_id>
@@ -65,6 +77,7 @@ class KeySpaces(Resource):
   def __init__(self, db):
     self.db = db
 
+  @validate
   def get(self):
     """
     GET /keyspaces?axisNames=...&keySpaceIds=...&names=...&keys=...

@@ -6,6 +6,7 @@ from bson import ObjectId
 import util as util
 from proto.framespace import framespace_pb2 as fs
 
+
 class Axis(Resource):
   """
   API Resource that describes a single Axis.
