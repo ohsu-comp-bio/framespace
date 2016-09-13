@@ -11,10 +11,15 @@ def validateRulesEngine(request):
   """
   print dir(request)
   print request.url
+  method = request.method
+  resource = request.url
   jwt_token = str(request.headers['Authorization'].split(' ')[1])
 
   r = requests.post('http://localhost:5000/v1/ruleEngine/validation', \
-    data = json.dumps({'token': jwt_token, 'action':str(request.method), 'resources': str(request.url)}), \
+    data = json.dumps({'token': jwt_token, 'action':str(method), 'resources': str(resource)}), \
     headers={'content-type': 'application/json'})
 
-  return strToBool(r.content)
+  if strToBool(r.content):
+    return True
+
+  return False

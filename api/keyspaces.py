@@ -9,6 +9,8 @@ from proto.framespace import framespace_pb2 as fs
 from ccc_auth import validateRulesEngine
 from functools import wraps
 
+from google.protobuf import json_format
+
 def validate(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -16,6 +18,7 @@ def validate(func):
         return abort(401)
       return func(*args, **kwargs)
     return wrapper
+
 
 class KeySpace(Resource):
   """
@@ -77,13 +80,13 @@ class KeySpaces(Resource):
   def __init__(self, db):
     self.db = db
 
-  @validate
+  # @validate
   def get(self):
     """
     GET /keyspaces?axisNames=...&keySpaceIds=...&names=...&keys=...
     """
     # handle keys args
-    return self.searchKeySpaces(dict(request.args))
+    return self.searchKeySpaces(dict(request.args), from_get=True)
 
   def post(self):
     """
@@ -97,12 +100,14 @@ class KeySpaces(Resource):
     return self.searchKeySpaces(request.json)
 
 
-  def searchKeySpaces(self, request):
+  @validate
+  def searchKeySpaces(self, request, from_get=False):
 
     try:
 
       # get proto, validates
       jreq = util.fromJson(json.dumps(request), fs.SearchKeySpacesRequest)
+      print json_format._MessageToJsonObject(jreq, True)
 
       # handle masks
       mask = util.setMask(jreq.keys, unicode('mask'), "keys")
@@ -111,16 +116,16 @@ class KeySpaces(Resource):
       filters = {}
 
       if len(jreq.axis_names) > 0:
-        filters['axis_name'] = util.getMongoFieldFilter(jreq.axis_names, str)
+        filters['axis_name'] = util.getMongoFieldFilter(jreq.axis_names, str, from_get=from_get)
 
       if len(jreq.names) > 0:
-        filters['name'] = util.getMongoFieldFilter(jreq.names, str)
+        filters['name'] = util.getMongoFieldFilter(jreq.names, str, from_get=from_get)
       
       if len(jreq.keyspace_ids) > 0:
-        filters['_id'] = util.getMongoFieldFilter(jreq.keyspace_ids, ObjectId)
+        filters['_id'] = util.getMongoFieldFilter(jreq.keyspace_ids, ObjectId, from_get=from_get)
       
       if len(jreq.keys) > 0:
-        filters['keys'] = util.getMongoFieldFilter(jreq.keys, str)
+        filters['keys'] = util.getMongoFieldFilter(jreq.keys, str, from_get=from_get)
 
       result = self.db.keyspace.find(filters, mask)
 
