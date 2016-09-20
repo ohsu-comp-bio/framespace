@@ -42,13 +42,13 @@ class Importer:
         units = [{"name": i, "description":""} for i in ksmin_keys]
         self.config.units = units
 
-      self.conn.registerUnits(self.config.units)
+      units = self.conn.registerUnits(self.config.units)
 
       self.minor_keyspaceId = self.conn.registerKeyspaceEmbedded(init_df, self.config.ksemb_id, self.config.ksemb_name, self.config.ksemb_axis, rename=self.rename, keys=ksmin_keys)
 
       # construct first dataframe and add to list to be registered
       try:
-        self.conn.registerDataFrame(init_df, self.minor_keyspaceId, self.config.units)
+        self.conn.registerDataFrame(init_df, self.minor_keyspaceId, units)
         print "Completed: {0}".format(init_file)
       
       except Exception, e:
@@ -57,7 +57,7 @@ class Importer:
 
       # work on the rest at once
       if len(tsv_files) > 0:
-        parallelGen(tsv_files, self.minor_keyspaceId, self.config.units, self.config.db_name, self.config.ksemb_filter, self.config.ksemb_id, self.rename, host)
+        parallelGen(tsv_files, self.minor_keyspaceId, units, self.config.db_name, self.config.ksemb_filter, self.config.ksemb_id, self.rename, host)
 
 def poolLoadTSV((tsv, ks_minor, units, db, ksm_filter, ksm_id, rename, host)):
   """

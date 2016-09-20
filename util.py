@@ -25,13 +25,19 @@ def fromJson(json, protoClass):
     """
     return json_format.Parse(json, protoClass())
 
-def getMongoFieldFilter(filterList, maptype):
+def getMongoFieldFilter(filterList, maptype, from_get=False):
+
+  # catch GET calls
+  if from_get:
+    filterList = filterList[0].split(',')
+
   try:
     return {"$in": map(maptype, filterList)}
   except:
     return None
 
 def setMask(request_list, identifier, mask):
+
   if identifier in request_list:
     request_list.remove(identifier)
     return {mask: 0}
@@ -51,3 +57,8 @@ def getRequest(request, return_json={"names":[]}):
     return "Bad content type, must be application/json\n"
 
   return request.json
+
+def authenticate(request):
+  token = request.headers.get('authorization', None)
+  return str(token)
+

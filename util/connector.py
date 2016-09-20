@@ -53,8 +53,18 @@ class Connector:
     Register any newly specified units.
     Units is a required field in the config, so no checking is necessary.
     """
+    registeredUnits = []
     for unit in units:
-      self.units.update({'name': unit['name']}, unit, upsert=True)
+      u = self.units.find_and_modify({'name': unit['name']}, unit, upsert=True, full_response=True)
+      try:
+        # registered new unit
+        _id = u['lastErrorObject']['upserted']
+      except:
+        # updated unit
+        _id = u['value']['_id']
+
+      registeredUnits.append(_id)
+    return registeredUnits
 
 
   def registerKeyspaceFile(self, metadata, name, keys, axis):
@@ -74,7 +84,7 @@ class Connector:
       for ks in kspaces:
         ks_df = m_df[m_df[name].str.contains(ks)]
         key_list = list(ks_df[keys])
-        ks_obj = {'name': ks, 'axis_name': axis, 'keys': key_list}
+        ks_obj = {'name': ks.replace('.','-'), 'axis_name': axis, 'keys': key_list}
         self.keyspace.update({'name': ks, 'axis_name': axis}, ks_obj, upsert=True)
 
       del m_df
@@ -101,12 +111,13 @@ class Connector:
 
 
   def registerDataFrame(self, df, ksminor_objid, units):
+  # def registerVectors(self, df, ksminor_objid, units):
     """
     Gets respecitve major keyspace.
     Registers the lines of the tsv file as vectors.
     Register the tsv as a dataframe with pointer to vectors.
     """
-
+    from itertools import repeat
     # get major keyspace
     # assumes all keys are registered
     keys = df.columns.tolist()[1:]
@@ -114,7 +125,7 @@ class Connector:
 
     if md_ks is not None:
       # vectors are inserted into dataframe as ids to get around data storage limit
-      vectors = self.vector.insert_many(map(createVector, df.reset_index().to_dict(orient='records')))
+      vectors = self.vector.insert_many(map(createVectorClos(md_ks['_id'], ksminor_objid, units), df.reset_index().to_dict(orient='records')))
       dataframe = {"major": md_ks['_id'], "minor": ksminor_objid, "units": units, "contents": list(vectors.inserted_ids)}
 
       _id = self.dataframe.insert_one(dataframe)
@@ -122,7 +133,7 @@ class Connector:
     else:
       raise ValueError("KeySpace must be registered before registering dataframe.")
 
-def createVector(vector):
+def createVector(major, minor, units, vector):
   try:
     # get non-transposed vector
     key = vector.pop('key')
@@ -130,4 +141,9 @@ def createVector(vector):
   except:
     # get transposed vector
     key = vector.pop('index')
-  return {'key': key, 'contents': vector, 'info':{}}
+  return {'key': key, 'contents': vector, 'info':{}, 'majks': major, 'minks': minor, 'units':units}
+
+def createVectorClos(major, minor, units):
+  def f(vector):
+      return createVector(major, minor, units, vector)
+  return f
