@@ -15,16 +15,15 @@ _sym_db = _symbol_database.Default()
 
 from proto.framespace import framespace_pb2 as proto_dot_framespace_dot_framespace__pb2
 from google.api import annotations_pb2 as google_dot_api_dot_annotations__pb2
-from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='proto/framespace/framespace_service.proto',
   package='framespace',
   syntax='proto3',
-  serialized_pb=_b('\n)proto/framespace/framespace_service.proto\x12\nframespace\x1a!proto/framespace/framespace.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1bgoogle/protobuf/empty.proto2\x8b\x05\n\x11\x46rameSpaceService\x12\x64\n\nSearchAxes\x12\x1d.framespace.SearchAxesRequest\x1a\x1e.framespace.SearchAxesResponse\"\x17\x82\xd3\xe4\x93\x02\x11\"\x0c/axes/search:\x01*\x12\x45\n\x04\x41xes\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\r\x82\xd3\xe4\x93\x02\x07\x12\x05/axes\x12x\n\x0fSearchKeySpaces\x12\".framespace.SearchKeySpacesRequest\x1a#.framespace.SearchKeySpacesResponse\"\x1c\x82\xd3\xe4\x93\x02\x16\"\x11/keyspaces/search:\x01*\x12h\n\x0bSearchUnits\x12\x1e.framespace.SearchUnitsRequest\x1a\x1f.framespace.SearchUnitsResponse\"\x18\x82\xd3\xe4\x93\x02\x12\"\r/units/search:\x01*\x12|\n\x10SearchDataFrames\x12#.framespace.SearchDataFramesRequest\x1a$.framespace.SearchDataFramesResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\"\x12/dataframes/search:\x01*\x12g\n\x0eSliceDataFrame\x12!.framespace.SliceDataFrameRequest\x1a\x15.framespace.DataFrame\"\x1b\x82\xd3\xe4\x93\x02\x15\"\x10/dataframe/slice:\x01*b\x06proto3')
+  serialized_pb=_b('\n)proto/framespace/framespace_service.proto\x12\nframespace\x1a!proto/framespace/framespace.proto\x1a\x1cgoogle/api/annotations.proto2\xac\x07\n\x11\x46rameSpaceService\x12m\n\nSearchAxes\x12\x1d.framespace.SearchAxesRequest\x1a\x1e.framespace.SearchAxesResponse\" \x82\xd3\xe4\x93\x02\x1a\"\x0c/axes/search:\x01*Z\x07\x12\x05/axes\x12I\n\rGetAxesByName\x12\x10.framespace.Axis\x1a\x10.framespace.Axis\"\x14\x82\xd3\xe4\x93\x02\x0e\x12\x0c/axes/{name}\x12\x86\x01\n\x0fSearchKeySpaces\x12\".framespace.SearchKeySpacesRequest\x1a#.framespace.SearchKeySpacesResponse\"*\x82\xd3\xe4\x93\x02$\"\x11/keyspaces/search:\x01*Z\x0c\x12\n/keyspaces\x12W\n\x10GetKeySpacesById\x12\x14.framespace.KeySpace\x1a\x14.framespace.KeySpace\"\x17\x82\xd3\xe4\x93\x02\x11\x12\x0f/keyspaces/{id}\x12r\n\x0bSearchUnits\x12\x1e.framespace.SearchUnitsRequest\x1a\x1f.framespace.SearchUnitsResponse\"\"\x82\xd3\xe4\x93\x02\x1c\"\r/units/search:\x01*Z\x08\x12\x06/units\x12K\n\x0eGetUnitsByName\x12\x10.framespace.Unit\x1a\x10.framespace.Unit\"\x15\x82\xd3\xe4\x93\x02\x0f\x12\r/units/{name}\x12\x8b\x01\n\x10SearchDataFrames\x12#.framespace.SearchDataFramesRequest\x1a$.framespace.SearchDataFramesResponse\",\x82\xd3\xe4\x93\x02&\"\x12/dataframes/search:\x01*Z\r\x12\x0b/dataframes\x12\xab\x01\n\x0eSliceDataFrame\x12!.framespace.SliceDataFrameRequest\x1a\x15.framespace.DataFrame\"_\x82\xd3\xe4\x93\x02Y\"\x10/dataframe/slice:\x01*Z\x1b\x12\x19/dataframe/{dataframe_id}Z%\x12#/dataframe/transpose/{dataframe_id}b\x06proto3')
   ,
-  dependencies=[proto_dot_framespace_dot_framespace__pb2.DESCRIPTOR,google_dot_api_dot_annotations__pb2.DESCRIPTOR,google_dot_protobuf_dot_empty__pb2.DESCRIPTOR,])
+  dependencies=[proto_dot_framespace_dot_framespace__pb2.DESCRIPTOR,google_dot_api_dot_annotations__pb2.DESCRIPTOR,])
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 
@@ -43,13 +42,19 @@ class BetaFrameSpaceServiceServicer(object):
   def SearchAxes(self, request, context):
     raise NotImplementedError()
   @abc.abstractmethod
-  def Axes(self, request, context):
+  def GetAxesByName(self, request, context):
     raise NotImplementedError()
   @abc.abstractmethod
   def SearchKeySpaces(self, request, context):
     raise NotImplementedError()
   @abc.abstractmethod
+  def GetKeySpacesById(self, request, context):
+    raise NotImplementedError()
+  @abc.abstractmethod
   def SearchUnits(self, request, context):
+    raise NotImplementedError()
+  @abc.abstractmethod
+  def GetUnitsByName(self, request, context):
     raise NotImplementedError()
   @abc.abstractmethod
   def SearchDataFrames(self, request, context):
@@ -66,17 +71,25 @@ class BetaFrameSpaceServiceStub(object):
     raise NotImplementedError()
   SearchAxes.future = None
   @abc.abstractmethod
-  def Axes(self, request, timeout):
+  def GetAxesByName(self, request, timeout):
     raise NotImplementedError()
-  Axes.future = None
+  GetAxesByName.future = None
   @abc.abstractmethod
   def SearchKeySpaces(self, request, timeout):
     raise NotImplementedError()
   SearchKeySpaces.future = None
   @abc.abstractmethod
+  def GetKeySpacesById(self, request, timeout):
+    raise NotImplementedError()
+  GetKeySpacesById.future = None
+  @abc.abstractmethod
   def SearchUnits(self, request, timeout):
     raise NotImplementedError()
   SearchUnits.future = None
+  @abc.abstractmethod
+  def GetUnitsByName(self, request, timeout):
+    raise NotImplementedError()
+  GetUnitsByName.future = None
   @abc.abstractmethod
   def SearchDataFrames(self, request, timeout):
     raise NotImplementedError()
@@ -89,8 +102,12 @@ class BetaFrameSpaceServiceStub(object):
 def beta_create_FrameSpaceService_server(servicer, pool=None, pool_size=None, default_timeout=None, maximum_timeout=None):
   import proto.framespace.framespace_pb2
   import proto.framespace.framespace_pb2
-  import google.protobuf.empty_pb2
-  import google.protobuf.empty_pb2
+  import proto.framespace.framespace_pb2
+  import proto.framespace.framespace_pb2
+  import proto.framespace.framespace_pb2
+  import proto.framespace.framespace_pb2
+  import proto.framespace.framespace_pb2
+  import proto.framespace.framespace_pb2
   import proto.framespace.framespace_pb2
   import proto.framespace.framespace_pb2
   import proto.framespace.framespace_pb2
@@ -100,7 +117,9 @@ def beta_create_FrameSpaceService_server(servicer, pool=None, pool_size=None, de
   import proto.framespace.framespace_pb2
   import proto.framespace.framespace_pb2
   request_deserializers = {
-    ('framespace.FrameSpaceService', 'Axes'): google.protobuf.empty_pb2.Empty.FromString,
+    ('framespace.FrameSpaceService', 'GetAxesByName'): proto.framespace.framespace_pb2.Axis.FromString,
+    ('framespace.FrameSpaceService', 'GetKeySpacesById'): proto.framespace.framespace_pb2.KeySpace.FromString,
+    ('framespace.FrameSpaceService', 'GetUnitsByName'): proto.framespace.framespace_pb2.Unit.FromString,
     ('framespace.FrameSpaceService', 'SearchAxes'): proto.framespace.framespace_pb2.SearchAxesRequest.FromString,
     ('framespace.FrameSpaceService', 'SearchDataFrames'): proto.framespace.framespace_pb2.SearchDataFramesRequest.FromString,
     ('framespace.FrameSpaceService', 'SearchKeySpaces'): proto.framespace.framespace_pb2.SearchKeySpacesRequest.FromString,
@@ -108,7 +127,9 @@ def beta_create_FrameSpaceService_server(servicer, pool=None, pool_size=None, de
     ('framespace.FrameSpaceService', 'SliceDataFrame'): proto.framespace.framespace_pb2.SliceDataFrameRequest.FromString,
   }
   response_serializers = {
-    ('framespace.FrameSpaceService', 'Axes'): google.protobuf.empty_pb2.Empty.SerializeToString,
+    ('framespace.FrameSpaceService', 'GetAxesByName'): proto.framespace.framespace_pb2.Axis.SerializeToString,
+    ('framespace.FrameSpaceService', 'GetKeySpacesById'): proto.framespace.framespace_pb2.KeySpace.SerializeToString,
+    ('framespace.FrameSpaceService', 'GetUnitsByName'): proto.framespace.framespace_pb2.Unit.SerializeToString,
     ('framespace.FrameSpaceService', 'SearchAxes'): proto.framespace.framespace_pb2.SearchAxesResponse.SerializeToString,
     ('framespace.FrameSpaceService', 'SearchDataFrames'): proto.framespace.framespace_pb2.SearchDataFramesResponse.SerializeToString,
     ('framespace.FrameSpaceService', 'SearchKeySpaces'): proto.framespace.framespace_pb2.SearchKeySpacesResponse.SerializeToString,
@@ -116,7 +137,9 @@ def beta_create_FrameSpaceService_server(servicer, pool=None, pool_size=None, de
     ('framespace.FrameSpaceService', 'SliceDataFrame'): proto.framespace.framespace_pb2.DataFrame.SerializeToString,
   }
   method_implementations = {
-    ('framespace.FrameSpaceService', 'Axes'): face_utilities.unary_unary_inline(servicer.Axes),
+    ('framespace.FrameSpaceService', 'GetAxesByName'): face_utilities.unary_unary_inline(servicer.GetAxesByName),
+    ('framespace.FrameSpaceService', 'GetKeySpacesById'): face_utilities.unary_unary_inline(servicer.GetKeySpacesById),
+    ('framespace.FrameSpaceService', 'GetUnitsByName'): face_utilities.unary_unary_inline(servicer.GetUnitsByName),
     ('framespace.FrameSpaceService', 'SearchAxes'): face_utilities.unary_unary_inline(servicer.SearchAxes),
     ('framespace.FrameSpaceService', 'SearchDataFrames'): face_utilities.unary_unary_inline(servicer.SearchDataFrames),
     ('framespace.FrameSpaceService', 'SearchKeySpaces'): face_utilities.unary_unary_inline(servicer.SearchKeySpaces),
@@ -129,8 +152,12 @@ def beta_create_FrameSpaceService_server(servicer, pool=None, pool_size=None, de
 def beta_create_FrameSpaceService_stub(channel, host=None, metadata_transformer=None, pool=None, pool_size=None):
   import proto.framespace.framespace_pb2
   import proto.framespace.framespace_pb2
-  import google.protobuf.empty_pb2
-  import google.protobuf.empty_pb2
+  import proto.framespace.framespace_pb2
+  import proto.framespace.framespace_pb2
+  import proto.framespace.framespace_pb2
+  import proto.framespace.framespace_pb2
+  import proto.framespace.framespace_pb2
+  import proto.framespace.framespace_pb2
   import proto.framespace.framespace_pb2
   import proto.framespace.framespace_pb2
   import proto.framespace.framespace_pb2
@@ -140,7 +167,9 @@ def beta_create_FrameSpaceService_stub(channel, host=None, metadata_transformer=
   import proto.framespace.framespace_pb2
   import proto.framespace.framespace_pb2
   request_serializers = {
-    ('framespace.FrameSpaceService', 'Axes'): google.protobuf.empty_pb2.Empty.SerializeToString,
+    ('framespace.FrameSpaceService', 'GetAxesByName'): proto.framespace.framespace_pb2.Axis.SerializeToString,
+    ('framespace.FrameSpaceService', 'GetKeySpacesById'): proto.framespace.framespace_pb2.KeySpace.SerializeToString,
+    ('framespace.FrameSpaceService', 'GetUnitsByName'): proto.framespace.framespace_pb2.Unit.SerializeToString,
     ('framespace.FrameSpaceService', 'SearchAxes'): proto.framespace.framespace_pb2.SearchAxesRequest.SerializeToString,
     ('framespace.FrameSpaceService', 'SearchDataFrames'): proto.framespace.framespace_pb2.SearchDataFramesRequest.SerializeToString,
     ('framespace.FrameSpaceService', 'SearchKeySpaces'): proto.framespace.framespace_pb2.SearchKeySpacesRequest.SerializeToString,
@@ -148,7 +177,9 @@ def beta_create_FrameSpaceService_stub(channel, host=None, metadata_transformer=
     ('framespace.FrameSpaceService', 'SliceDataFrame'): proto.framespace.framespace_pb2.SliceDataFrameRequest.SerializeToString,
   }
   response_deserializers = {
-    ('framespace.FrameSpaceService', 'Axes'): google.protobuf.empty_pb2.Empty.FromString,
+    ('framespace.FrameSpaceService', 'GetAxesByName'): proto.framespace.framespace_pb2.Axis.FromString,
+    ('framespace.FrameSpaceService', 'GetKeySpacesById'): proto.framespace.framespace_pb2.KeySpace.FromString,
+    ('framespace.FrameSpaceService', 'GetUnitsByName'): proto.framespace.framespace_pb2.Unit.FromString,
     ('framespace.FrameSpaceService', 'SearchAxes'): proto.framespace.framespace_pb2.SearchAxesResponse.FromString,
     ('framespace.FrameSpaceService', 'SearchDataFrames'): proto.framespace.framespace_pb2.SearchDataFramesResponse.FromString,
     ('framespace.FrameSpaceService', 'SearchKeySpaces'): proto.framespace.framespace_pb2.SearchKeySpacesResponse.FromString,
@@ -156,7 +187,9 @@ def beta_create_FrameSpaceService_stub(channel, host=None, metadata_transformer=
     ('framespace.FrameSpaceService', 'SliceDataFrame'): proto.framespace.framespace_pb2.DataFrame.FromString,
   }
   cardinalities = {
-    'Axes': cardinality.Cardinality.UNARY_UNARY,
+    'GetAxesByName': cardinality.Cardinality.UNARY_UNARY,
+    'GetKeySpacesById': cardinality.Cardinality.UNARY_UNARY,
+    'GetUnitsByName': cardinality.Cardinality.UNARY_UNARY,
     'SearchAxes': cardinality.Cardinality.UNARY_UNARY,
     'SearchDataFrames': cardinality.Cardinality.UNARY_UNARY,
     'SearchKeySpaces': cardinality.Cardinality.UNARY_UNARY,
