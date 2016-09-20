@@ -41,6 +41,9 @@ python importer.py -c ../test/data/clinical/import.config -i ../test/data/clinic
 
 ## Endpoint Descriptions
 
+See [here](http://ohsu-computational-biology.github.io/ccc_api/) for full documentation. 
+The below is a summary of the available POST methods.
+
 ### SearchAxes `/axes/search`
 
 Search available axes.
