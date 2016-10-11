@@ -8,7 +8,7 @@ from connector import Connector
 
 class Importer:
 
-  def __init__(self, config, files=[None], host='0.0.0.0'):
+  def __init__(self, config, files=[None], host='0.0.0.0', is_json=False):
     """
     Importer will setup config and perform parallel import of tsv files into mongo.
     """
@@ -34,8 +34,18 @@ class Importer:
       # replace minor keyspace in tsv identifier with ksminor name
       # fix this later
       self.rename = {self.config.ksemb_id: 'key'}
-      init_df = getDataFrame(init_file, ksminor_filter=self.config.ksemb_filter, ksminor_id=self.config.ksemb_id, rename=self.rename, transpose=self.config.transpose)
-      
+      if is_json:
+        with open(init_file) as j:
+          import json, re
+          dfs = [json.loads(re.sub(self.config.ksemb_id, 'contents', re.sub('barcode', self.rename[self.config.ksemb_id], str(line), 1), 1)) for line in j]
+          init_df = dfs[0]
+          tsv_files = dfs[1:]
+          print len(tsv_files)
+          del dfs
+
+      else:
+        init_df = getDataFrame(init_file, ksminor_filter=self.config.ksemb_filter, ksminor_id=self.config.ksemb_id, rename=self.rename, transpose=self.config.transpose, is_json=is_json)
+        
       ksmin_keys = None
       if self.config.infer_units:
         ksmin_keys = list(init_df.index)
@@ -48,7 +58,7 @@ class Importer:
 
       # construct first dataframe and add to list to be registered
       try:
-        self.conn.registerDataFrame(init_df, self.minor_keyspaceId, units)
+        self.conn.registerDataFrame(init_df, self.minor_keyspaceId, units, is_json=is_json)
         print "Completed: {0}".format(init_file)
       
       except Exception, e:
@@ -57,25 +67,29 @@ class Importer:
 
       # work on the rest at once
       if len(tsv_files) > 0:
-        parallelGen(tsv_files, self.minor_keyspaceId, units, self.config.db_name, self.config.ksemb_filter, self.config.ksemb_id, self.rename, host)
+        parallelGen(tsv_files, self.minor_keyspaceId, units, self.config.db_name, self.config.ksemb_filter, self.config.ksemb_id, self.rename, host, is_json=is_json)
 
-def poolLoadTSV((tsv, ks_minor, units, db, ksm_filter, ksm_id, rename, host)):
+def poolLoadTSV((tsv, ks_minor, units, db, ksm_filter, ksm_id, rename, host, is_json)):
   """
   This function is used by multiprocess.Pool to populate framespace with a new dataframe.
   """
   try:
     # register vectors and get the dataframe object for insert
     conn = Connector(db, host=host)
-    df_id = conn.registerDataFrame(getDataFrame(tsv, ksminor_id=ksm_id, ksminor_filter=ksm_filter, rename=rename), ks_minor, units)
+    if is_json:
+      df_id = conn.registerDataFrame(tsv, ks_minor, units, is_json=is_json)
+    else:
+      df_id = conn.registerDataFrame(getDataFrame(tsv, ksminor_id=ksm_id, ksminor_filter=ksm_filter, rename=rename), ks_minor, units)
   
   except Exception, e:
     traceback.print_exc(file=sys.stdout)
-    print "Error processing {0}".format(tsv)
+    # print "Error processing {0}".format(tsv)
+    print "Error processing"
     print str(e)
     return (-1, tsv)
   return (0, tsv)
 
-def parallelGen(tsv_files, ks_minor, units, db, ksm_filter, ksm_id, rename, host):
+def parallelGen(tsv_files, ks_minor, units, db, ksm_filter, ksm_id, rename, host, is_json):
   """
   Function that spawns the Pool of vector registration and dataframe production
   """
@@ -83,7 +97,7 @@ def parallelGen(tsv_files, ks_minor, units, db, ksm_filter, ksm_id, rename, host
   function_args = [None] * len(tsv_files)
   index = 0
   for tsv in tsv_files:
-    function_args[index] = (tsv, ks_minor, units, db, ksm_filter, ksm_id, rename, host)
+    function_args[index] = (tsv, ks_minor, units, db, ksm_filter, ksm_id, rename, host, is_json)
     index += 1
 
   pool = Pool()
@@ -91,14 +105,15 @@ def parallelGen(tsv_files, ks_minor, units, db, ksm_filter, ksm_id, rename, host
   for returncode in pool.imap_unordered(poolLoadTSV, function_args):
     if returncode[0] == -1:
       failed.append(returncode[1])
-    else:
-      print "Completed: {0}".format(returncode[1])
+    # else:
+    #   # print "Completed: {0}".format(returncode[1])
+    #   print "Completed"
 
   if len(failed):
-    print "\nERROR: Following files failed to process:"
-    for f in failed:
-      print "\t{0}".format(f)
-    raise Exception("Execution failed on {0}".format(failed))
+    print "\nERROR: some data failed to process."
+    # for f in failed:
+    #   print "\t{0}".format(f)
+    # raise Exception("Execution failed on {0}".format(len(failed)))
 
 
 def getDataFrame(tsv, ksminor_filter=None, ksminor_id=None, rename=None, transpose=False):
@@ -138,9 +153,12 @@ if __name__ == '__main__':
   parser.add_argument("-i", "--inputs", nargs='+', type=str, required=False, default=[None], 
                     help="List of tsvs to input as DataFrames")
 
+  parser.add_argument("-j", "--json", action="store_true", help="If set, input is a list of json vectors (GDC).")
+
+
   args = parser.parse_args()
 
-  importer = Importer(args.config, args.inputs, host=args.host)
+  importer = Importer(args.config, args.inputs, host=args.host, is_json=args.json)
 
   print importer.config.db_name
   
