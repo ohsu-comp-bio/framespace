@@ -44,7 +44,7 @@ class Importer:
           del dfs
 
       else:
-        init_df = getDataFrame(init_file, ksminor_filter=self.config.ksemb_filter, ksminor_id=self.config.ksemb_id, rename=self.rename, transpose=self.config.transpose, is_json=is_json)
+        init_df = getDataFrame(init_file, ksminor_filter=self.config.ksemb_filter, ksminor_id=self.config.ksemb_id, rename=self.rename, transpose=self.config.transpose)
         
       ksmin_keys = None
       if self.config.infer_units:
