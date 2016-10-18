@@ -72,10 +72,12 @@ class DataFrames(Resource):
 
         # process keyspace ids
         if len(keyspace_ids) > 0:
-          filters['$or'] = [{'major': util.getMongoFieldFilter(keyspace_ids, ObjectId, from_get=from_get)}]
+          filters.setdefault('$or',[]).append({'major': util.getMongoFieldFilter(keyspace_ids, ObjectId, from_get=from_get)})
           filters['$or'].append({'minor': util.getMongoFieldFilter(keyspace_ids, ObjectId, from_get=from_get)})
 
-      # query backend
+      if len(jreq.unit_ids) > 0:
+        filters.setdefault('$and', []).append({'units': util.getMongoFieldFilter(jreq.unit_ids, ObjectId, from_get=from_get)})
+
       result = self.db.dataframe.find(filters, mask_contents)
       # make proto
       _protoresp = fs.SearchDataFramesResponse(dataframes=[])

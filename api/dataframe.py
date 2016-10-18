@@ -39,6 +39,7 @@ class DataFrame(Resource):
     """
     transpose = bool(request.args.get('transpose', False))
     request_args = self.translateGetArgs(request, dataframe_id)
+    print request_args
     return self.sliceDataFrame(json.dumps(request_args), transpose=transpose)
 
 
