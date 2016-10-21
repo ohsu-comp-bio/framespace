@@ -1,10 +1,12 @@
 from flask import request, jsonify
-from flask_restful import Resource, abort
+from flask_restful import Resource
 import json
 from bson import ObjectId
 
-import util as util
+from api.exceptions import JsonRequiredException
+import util
 from proto.framespace import framespace_pb2 as fs
+
 
 class KeySpace(Resource):
   """
@@ -26,27 +28,22 @@ class KeySpace(Resource):
       """
       GET /keyspaces/<keyspace_id>
       """
-      try:
+      mask = None
+      if bool(request.args.get('mask', False)):
+        mask = {'keys': 0}
 
-        mask = None
-        if bool(request.args.get('mask', False)):
-          mask = {'keys': 0}
+      result = self.db.keyspace.find_one({"_id": ObjectId(keyspace_id)}, mask)
 
-        result = self.db.keyspace.find_one({"_id": ObjectId(keyspace_id)}, mask)
+      if result:
+        _keyspace = fs.KeySpace(name=result['name'], \
+          axis_name=result['axis_name'], \
+          id=str(result['_id']))
+        if mask is None:
+          _keyspace.keys.extend(result['keys'])
 
-        if result:
-          _keyspace = fs.KeySpace(name=result['name'], \
-            axis_name=result['axis_name'], \
-            id=str(result['_id']))
-          if mask is None:
-            _keyspace.keys.extend(result['keys'])
-
-          return util.toFlaskJson(_keyspace)
-        else:
-          return jsonify({})
-
-      except Exception as e:
-        return jsonify({500: str(e)})
+        return util.toFlaskJson(_keyspace)
+      else:
+        return jsonify({})
 
 
 class KeySpaces(Resource):
@@ -77,48 +74,44 @@ class KeySpaces(Resource):
     POST /keyspaces/search
     {"names": ["name1"], "axis_names": ["axis_name1"], "keyspace_ids": ["57118a40b5262889d1de9c94"], "keys": ["key1"] }
     """
-    # validate request
-    if not request.json:
-      return "Bad content type, must be application/json."
+
+    # Request must have content type of application/json
+    if request.json is None:
+      raise JsonRequiredException()
 
     return self.searchKeySpaces(request.json)
 
 
   def searchKeySpaces(self, request):
 
-    try:
+    # get proto, validates
+    jreq = util.fromJson(json.dumps(request), fs.SearchKeySpacesRequest)
 
-      # get proto, validates
-      jreq = util.fromJson(json.dumps(request), fs.SearchKeySpacesRequest)
+    # handle masks
+    mask = util.setMask(jreq.keys, unicode('mask'), "keys")
 
-      # handle masks
-      mask = util.setMask(jreq.keys, unicode('mask'), "keys")
+    # consolidate filters
+    filters = {}
 
-      # consolidate filters
-      filters = {}
+    if len(jreq.axis_names) > 0:
+      filters['axis_name'] = util.getMongoFieldFilter(jreq.axis_names, str)
 
-      if len(jreq.axis_names) > 0:
-        filters['axis_name'] = util.getMongoFieldFilter(jreq.axis_names, str)
+    if len(jreq.names) > 0:
+      filters['name'] = util.getMongoFieldFilter(jreq.names, str)
 
-      if len(jreq.names) > 0:
-        filters['name'] = util.getMongoFieldFilter(jreq.names, str)
-      
-      if len(jreq.keyspace_ids) > 0:
-        filters['_id'] = util.getMongoFieldFilter(jreq.keyspace_ids, ObjectId)
-      
-      if len(jreq.keys) > 0:
-        filters['keys'] = util.getMongoFieldFilter(jreq.keys, str)
+    if len(jreq.keyspace_ids) > 0:
+      filters['_id'] = util.getMongoFieldFilter(jreq.keyspace_ids, ObjectId)
 
-      result = self.db.keyspace.find(filters, mask)
+    if len(jreq.keys) > 0:
+      filters['keys'] = util.getMongoFieldFilter(jreq.keys, str)
 
-      # make proto
-      _protoresp = fs.SearchKeySpacesResponse()
-      for r in result:
-        if r.get('keys', None) is None:
-          r['keys'] = []
-        _protoresp.keyspaces.add(name=r['name'], axis_name=r['axis_name'], id=str(r['_id']), keys=r['keys'])
+    result = self.db.keyspace.find(filters, mask)
 
-      return util.toFlaskJson(_protoresp)
+    # make proto
+    _protoresp = fs.SearchKeySpacesResponse()
+    for r in result:
+      if r.get('keys', None) is None:
+        r['keys'] = []
+      _protoresp.keyspaces.add(name=r['name'], axis_name=r['axis_name'], id=str(r['_id']), keys=r['keys'])
 
-    except Exception as e:
-      return jsonify({500: str(e)})
+    return util.toFlaskJson(_protoresp)

@@ -1,20 +1,19 @@
 import os
 from flask import Flask
-from flask_restful import Resource, Api
-from functools import wraps
+from flask_restful import Resource
 
 from pymongo import MongoClient
 
+from api import FramespaceApi
 from api.units import Units, Unit
 from api.axes import Axis, Axes
 from api.keyspaces import KeySpace, KeySpaces
 from api.dataframes import DataFrames
 from api.dataframe import DataFrame, Transpose
 
-# app = Flask(__name__)
 # name passed to flask app will bind to db
 app = Flask('framespace')
-api = Api(app)
+api = FramespaceApi(app)
 
 # if not docker, then run locally
 try:

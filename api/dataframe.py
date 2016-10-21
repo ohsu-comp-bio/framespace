@@ -3,6 +3,7 @@ from flask_restful import Resource
 import json
 from bson import ObjectId
 
+from api.exceptions import JsonRequiredException, NotFoundException
 import util as util
 from proto.framespace import framespace_pb2 as fs
 from google.protobuf import json_format
@@ -49,84 +50,85 @@ class DataFrame(Resource):
     Unsupported: Transpose via passing dimensions. 
     Speed up by by-passing proto message creation in response
     """
-    if not request.json:
-      return "Bad content type, must be application/json\n"
+    if request.json is None:
+      raise JsonRequiredException()
 
-    if request.json.get('dataframeId', None) is None:
-      return "dataframeId required for sliceDataframe.\n"
-
-    return self.sliceDataFrame(json.dumps(request.json))
+    return self.sliceDataFrame(request.data)
 
 
-  def sliceDataFrame(self, request, transpose=False):
+  def sliceDataFrame(self, json_string, transpose=False):
+    # inits
+    vec_filters = {}
 
-    try:
+    # validate request
+    jreq = util.fromJson(json_string, fs.SliceDataFrameRequest)
 
-      # inits
-      vec_filters = {}
+    if not jreq.dataframe_id:
+      raise BadRequestException("dataframeId is required for sliceDataFrame")
 
-      # validate request
-      jreq = util.fromJson(request, fs.SliceDataFrameRequest)
+    # first request to get dataframe
+    result = self.db.dataframe.find_one({"_id": ObjectId(str(jreq.dataframe_id))})
 
-      # first request to get dataframe
-      result = self.db.dataframe.find_one({"_id": ObjectId(str(jreq.dataframe_id))})
+    if result is None:
+      msg = "Dataframe not found for ID = {}".format(jreq.dataframe_id)
+      raise NotFoundException(msg)
 
-      # prep vector query
-      vc = result.get('contents', [])
-      
-      # save page end for later check
-      page_end = int(jreq.page_end)
-      # if page start is outside of dataframe length, return empty
-      if jreq.page_start > len(vc):
-        dataframe = {"id": str(result["_id"]), \
-                   "major": {"keyspaceId": str(result['major']), "keys": []}, \
-                   "minor": {"keyspaceId": str(result['minor']), "keys": []}, \
-                   "contents": []}
-        return jsonify(dataframe)
+    # prep vector query
+    vc = result.get('contents', [])
 
-      elif jreq.page_end > len(vc) or len(jreq.new_minor.keys) > 0 or jreq.page_end == 0:
-        jreq.page_end = len(vc)
-
-      # construct vector filters
-      vec_filters["_id"] = {"$in": vc[jreq.page_start:jreq.page_end]}
-
-      if not transpose:
-        kmaj_keys = self.setDimensionFilters(jreq.new_major.keys, jreq.new_minor.keys, vec_filters)
-      else:
-        kmaj_keys = self.setDimensionFilters(jreq.new_minor.keys, jreq.new_major.keys, vec_filters)
-
-      # seconrd query to backend to get contents
-      vectors = self.db.vector.find(vec_filters, kmaj_keys)
-      vectors.batch_size(1000000)
-      # construct response
-
-      contents = {vector["key"]:vector["contents"] for vector in vectors}
-      if transpose:
-        # this is the overhead
-        d = pd.DataFrame.from_dict(contents, orient="index")
-        contents = d.to_dict()
-
-      # avoid invalid keys passing through to keys
-      # explore impacts on response time
-      kmaj_keys = []
-      if len(jreq.new_major.keys) > 0:
-        kmaj_keys = contents[contents.keys()[0]].keys()
-      # return keys in dimension, 
-      # if the whole dimension is not returned
-      kmin_keys = []
-      # if len(jreq.new_minor.keys) > 0 or page_end < len(vc):
-      if len(jreq.new_minor.keys) > 0 or page_end == 0:
-        kmin_keys = contents.keys()
-
-      dataframe = {"id": str(result["_id"]), \
-                   "major": {"keyspaceId": str(result['major']), "keys": kmaj_keys}, \
-                   "minor": {"keyspaceId": str(result['minor']), "keys": kmin_keys}, \
-                   "contents": contents}
-
+    # save page end for later check
+    page_end = int(jreq.page_end)
+    # if page start is outside of dataframe length, return empty
+    if jreq.page_start > len(vc):
+      dataframe = {
+        "id": str(result["_id"]),
+        "major": {"keyspaceId": str(result['major']), "keys": []},
+        "minor": {"keyspaceId": str(result['minor']), "keys": []},
+        "contents": []
+      }
       return jsonify(dataframe)
 
-    except Exception as e:
-      return jsonify({500: str(e)})
+    elif jreq.page_end > len(vc) or len(jreq.new_minor.keys) > 0 or jreq.page_end == 0:
+      jreq.page_end = len(vc)
+
+    # construct vector filters
+    vec_filters["_id"] = {"$in": vc[jreq.page_start:jreq.page_end]}
+
+    if not transpose:
+      kmaj_keys = self.setDimensionFilters(jreq.new_major.keys, jreq.new_minor.keys, vec_filters)
+    else:
+      kmaj_keys = self.setDimensionFilters(jreq.new_minor.keys, jreq.new_major.keys, vec_filters)
+
+    # seconrd query to backend to get contents
+    vectors = self.db.vector.find(vec_filters, kmaj_keys)
+    vectors.batch_size(1000000)
+    # construct response
+
+    contents = {vector["key"]:vector["contents"] for vector in vectors}
+    if transpose:
+      # this is the overhead
+      d = pd.DataFrame.from_dict(contents, orient="index")
+      contents = d.to_dict()
+
+    # avoid invalid keys passing through to keys
+    # explore impacts on response time
+    kmaj_keys = []
+    if len(jreq.new_major.keys) > 0:
+      kmaj_keys = contents[contents.keys()[0]].keys()
+    # return keys in dimension, 
+    # if the whole dimension is not returned
+    kmin_keys = []
+    # if len(jreq.new_minor.keys) > 0 or page_end < len(vc):
+    if len(jreq.new_minor.keys) > 0 or page_end == 0:
+      kmin_keys = contents.keys()
+
+    dataframe = {"id": str(result["_id"]), \
+                 "major": {"keyspaceId": str(result['major']), "keys": kmaj_keys}, \
+                 "minor": {"keyspaceId": str(result['minor']), "keys": kmin_keys}, \
+                 "contents": contents}
+
+    return jsonify(dataframe)
+
 
   def setDimensionFilters(self, major_keys, minor_keys, vec_filters):
     kmaj_keys = None
