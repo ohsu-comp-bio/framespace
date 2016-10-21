@@ -150,12 +150,12 @@ class Connector:
 def createVector(major, minor, units, vector, is_json=False):
   try:
     # get non-transposed vector
-    key = vector.pop('key')
-    del vector['index']
     if is_json:
       del vector['expressionForEdges']
       del vector['gid']
       del vector['type']
+    key = vector.pop('key')
+    del vector['index']
   except:
     # get transposed vector
     if not is_json:
