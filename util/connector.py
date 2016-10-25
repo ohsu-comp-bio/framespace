@@ -90,7 +90,7 @@ class Connector:
       del m_df
 
 
-  def registerKeyspaceEmbedded(self, df, ksminor_id, ksminor_name, ksminor_axis, rename=None, keys=None):
+  def registerKeyspaceEmbedded(self, df, ksminor_id, ksminor_name, ksminor_axis, rename=None, keys=None, is_json=False):
     """
     Registers a keyspace that is embedded in a matrix, any filtering is assumed to have happened prior to registration.
     ie. ksminor_filter must occur on df before running minor ks registration.
@@ -101,7 +101,12 @@ class Connector:
         keys = list(df[str(ksminor_name)])
       else:
         print 'rename flag set', rename
-        keys = list(df[str(rename[ksminor_id])])
+        if not is_json:
+          keys = list(df[str(rename[ksminor_id])])
+        else:
+          keys = df['contents'].keys()
+        print df
+        print keys
 
     # register minor keyspace
     minor_keyspace = {"name": ksminor_name, "axis_name": ksminor_axis, "keys": keys}
@@ -150,16 +155,18 @@ class Connector:
 def createVector(major, minor, units, vector, is_json=False):
   try:
     # get non-transposed vector
-    if is_json:
-      del vector['expressionForEdges']
-      del vector['gid']
-      del vector['type']
     key = vector.pop('key')
     del vector['index']
   except:
     # get transposed vector
     if not is_json:
       key = vector.pop('index')
+  if is_json:
+    del vector['expressionForEdges']
+    del vector['gid']
+    del vector['type']
+    vector = vector['contents']
+
   return {'key': key, 'contents': vector, 'info':{}, 'majks': major, 'minks': minor, 'units':units}
 
 def vectorFromCGD(vector, majks, units):
