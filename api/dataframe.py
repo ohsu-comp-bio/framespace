@@ -1,6 +1,6 @@
-from flask import request, jsonify
+import ujson as json
+from flask import request, make_response
 from flask_restful import Resource
-import json
 from bson import ObjectId
 
 import util as util
@@ -61,6 +61,7 @@ class DataFrame(Resource):
 
   def sliceDataFrame(self, request, transpose=False):
 
+    print "starting request"
     try:
 
       # inits
@@ -70,8 +71,9 @@ class DataFrame(Resource):
       jreq = util.fromJson(request, fs.SliceDataFrameRequest)
 
       # first request to get dataframe
+      print "first request to dataframe"
       result = self.db.dataframe.find_one({"_id": ObjectId(str(jreq.dataframe_id))})
-
+      print "first request to dataframe done"
       # prep vector query
       vc = result.get('contents', [])
       
@@ -83,7 +85,7 @@ class DataFrame(Resource):
                    "major": {"keyspaceId": str(result['major']), "keys": []}, \
                    "minor": {"keyspaceId": str(result['minor']), "keys": []}, \
                    "contents": []}
-        return jsonify(dataframe)
+        return json.dumps(dataframe, ensure_ascii=False), 200, {'Content-Type': 'application/json'}
 
       elif jreq.page_end > len(vc) or len(jreq.new_minor.keys) > 0 or jreq.page_end == 0:
         jreq.page_end = len(vc)
@@ -97,10 +99,13 @@ class DataFrame(Resource):
         kmaj_keys = self.setDimensionFilters(jreq.new_minor.keys, jreq.new_major.keys, vec_filters)
 
       # seconrd query to backend to get contents
+      print "searching for vectors"
       vectors = self.db.vector.find(vec_filters, kmaj_keys)
       vectors.batch_size(1000000)
+      print "done searching for vectors"
       # construct response
 
+      print "creating vectors for printing"
       contents = {vector["key"]:vector["contents"] for vector in vectors}
       if transpose:
         # this is the overhead
@@ -118,16 +123,19 @@ class DataFrame(Resource):
       # if len(jreq.new_minor.keys) > 0 or page_end < len(vc):
       if len(jreq.new_minor.keys) > 0 or page_end == 0:
         kmin_keys = contents.keys()
-
+      print "done with vectors, now working on dataframe"
       dataframe = {"id": str(result["_id"]), \
                    "major": {"keyspaceId": str(result['major']), "keys": kmaj_keys}, \
                    "minor": {"keyspaceId": str(result['minor']), "keys": kmin_keys}, \
                    "contents": contents}
-
-      return jsonify(dataframe)
-
+      print "data constructed, working on jsonifying"
+      resp = make_response(json.dumps(dataframe),200)
+      resp.content_type = 'application/json'
+      return resp
+ 
     except Exception as e:
-      return jsonify({500: str(e)})
+      #return jsonify({500: str(e)})
+      return str(e)
 
   def setDimensionFilters(self, major_keys, minor_keys, vec_filters):
     kmaj_keys = None
