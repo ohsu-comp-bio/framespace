@@ -4,13 +4,13 @@ import pandas as pd
 
 class Connector:
 
-  def __init__(self, database, host='0.0.0.0'):
+  def __init__(self, database, host='0.0.0.0', port=27017):
     """
     Connect to specified database, and ensure proper setup.
     """
-    self.conn = MongoClient(host, 27017)
+    self.conn = MongoClient(host, port, maxPoolSize=1000, serverSelectionTimeoutMS=300000)
     self.db = self.conn[database]
-
+    self.port = port
     # check collections
     self.axis = self.db.axis
     self.keyspace = self.db.keyspace
@@ -86,7 +86,6 @@ class Connector:
         key_list = list(ks_df[keys])
         ks_obj = {'name': ks.replace('.','-'), 'axis_name': axis, 'keys': key_list}
         self.keyspace.update({'name': ks, 'axis_name': axis}, ks_obj, upsert=True)
-
       del m_df
 
 
@@ -105,8 +104,6 @@ class Connector:
           keys = list(df[str(rename[ksminor_id])])
         else:
           keys = df['contents'].keys()
-        print df
-        print keys
 
     # register minor keyspace
     minor_keyspace = {"name": ksminor_name, "axis_name": ksminor_axis, "keys": keys}
@@ -116,7 +113,6 @@ class Connector:
 
 
   def registerDataFrame(self, df, ksminor_objid, units, is_json=False):
-  # def registerVectors(self, df, ksminor_objid, units):
     """
     Gets respecitve major keyspace.
     Registers the lines of the tsv file as vectors.
@@ -136,12 +132,13 @@ class Connector:
           ndf = self.dataframe.insert_one({"major": md_ks['_id'], "minor": ksminor_objid, "units": units, "contents": [vector.inserted_id]})
           return ndf.inserted_id
       else:
-        print "No keyspace belonging to the key {0}.".format([df['key']])
+	print "No keyspace belonging to the key {0}.".format([df['key']])
 
     else:
+      print self.port
       keys = df.columns.tolist()[1:]
       md_ks = self.keyspace.find_one({"keys": {"$regex": keys[0]}})
-
+      print keys[0]
       if md_ks is not None:
         # vectors are inserted into dataframe as ids to get around data storage limit
         vectors = self.vector.insert_many(map(createVectorClos(md_ks['_id'], ksminor_objid, units), df.reset_index().to_dict(orient='records')))

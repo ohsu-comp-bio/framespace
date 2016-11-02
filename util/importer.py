@@ -8,7 +8,7 @@ from connector import Connector
 
 class Importer:
 
-  def __init__(self, config, files=[None], host='0.0.0.0', is_json=False):
+  def __init__(self, config, files=[None], host='0.0.0.0', port=27017, is_json=False):
     """
     Importer will setup config and perform parallel import of tsv files into mongo.
     """
@@ -20,7 +20,7 @@ class Importer:
     init_file = files[0]
     tsv_files = files[1:]
 
-    self.conn = Connector(self.config.db_name, host=host)
+    self.conn = Connector(self.config.db_name, host=host, port=port)
 
     if self.config.axes is not None:
       self.conn.registerAxes(self.config.axes)
@@ -54,7 +54,7 @@ class Importer:
 
       units = self.conn.registerUnits(self.config.units)
 
-      self.minor_keyspaceId = self.conn.registerKeyspaceEmbedded(init_df, self.config.ksemb_id, self.config.ksemb_name, self.config.ksemb_axis, rename=self.rename, keys=ksmin_keys)
+      self.minor_keyspaceId = self.conn.registerKeyspaceEmbedded(init_df, self.config.ksemb_id, self.config.ksemb_name, self.config.ksemb_axis, rename=self.rename, keys=ksmin_keys, is_json=is_json)
 
       # construct first dataframe and add to list to be registered
       try:
@@ -67,15 +67,15 @@ class Importer:
 
       # work on the rest at once
       if len(tsv_files) > 0:
-        parallelGen(tsv_files, self.minor_keyspaceId, units, self.config.db_name, self.config.ksemb_filter, self.config.ksemb_id, self.rename, host, is_json=is_json)
+        parallelGen(tsv_files, self.minor_keyspaceId, units, self.config.db_name, self.config.ksemb_filter, self.config.ksemb_id, self.rename, host, port, is_json=is_json)
 
-def poolLoadTSV((tsv, ks_minor, units, db, ksm_filter, ksm_id, rename, host, is_json)):
+def poolLoadTSV((tsv, ks_minor, units, db, ksm_filter, ksm_id, rename, host, port, is_json)):
   """
   This function is used by multiprocess.Pool to populate framespace with a new dataframe.
   """
   try:
     # register vectors and get the dataframe object for insert
-    conn = Connector(db, host=host)
+    conn = Connector(db, host=host, port=port)
     if is_json:
       df_id = conn.registerDataFrame(tsv, ks_minor, units, is_json=is_json)
     else:
@@ -89,7 +89,7 @@ def poolLoadTSV((tsv, ks_minor, units, db, ksm_filter, ksm_id, rename, host, is_
     return (-1, tsv)
   return (0, tsv)
 
-def parallelGen(tsv_files, ks_minor, units, db, ksm_filter, ksm_id, rename, host, is_json):
+def parallelGen(tsv_files, ks_minor, units, db, ksm_filter, ksm_id, rename, host, port, is_json):
   """
   Function that spawns the Pool of vector registration and dataframe production
   """
@@ -97,7 +97,7 @@ def parallelGen(tsv_files, ks_minor, units, db, ksm_filter, ksm_id, rename, host
   function_args = [None] * len(tsv_files)
   index = 0
   for tsv in tsv_files:
-    function_args[index] = (tsv, ks_minor, units, db, ksm_filter, ksm_id, rename, host, is_json)
+    function_args[index] = (tsv, ks_minor, units, db, ksm_filter, ksm_id, rename, host, port, is_json)
     index += 1
 
   pool = Pool()
@@ -108,7 +108,8 @@ def parallelGen(tsv_files, ks_minor, units, db, ksm_filter, ksm_id, rename, host
     # else:
     #   # print "Completed: {0}".format(returncode[1])
     #   print "Completed"
-
+  pool.close()
+  pool.join()
   if len(failed):
     print "\nERROR: some data failed to process."
     # for f in failed:
@@ -150,6 +151,8 @@ if __name__ == '__main__':
   parser.add_argument("-H", "--host", required=False, type=str, 
                       help="Mongo host.")
 
+  parser.add_argument("-p", "--port", required=False, type=int, help="Mongo port.")
+
   parser.add_argument("-i", "--inputs", nargs='+', type=str, required=False, default=[None], 
                     help="List of tsvs to input as DataFrames")
 
@@ -158,7 +161,7 @@ if __name__ == '__main__':
 
   args = parser.parse_args()
 
-  importer = Importer(args.config, args.inputs, host=args.host, is_json=args.json)
+  importer = Importer(args.config, args.inputs, host=args.host, port=args.port, is_json=args.json)
 
   print importer.config.db_name
   

@@ -1,11 +1,16 @@
 """
-Collection of util functions used in server.py
+Collection of util functions used by FrameSpace endpoint classes
 """
 
-import json
-from flask import request, jsonify
+import ujson as json
+from flask import request, make_response, jsonify
 from google.protobuf import json_format
 from bson import ObjectId
+
+def buildResponse(data):
+  resp = make_response(json.dumps(data), 200)
+  resp.content_type = 'application/json'
+  return resp
 
 def nullifyToken(json):
   if json.get('nextPageToken', None) is not None:

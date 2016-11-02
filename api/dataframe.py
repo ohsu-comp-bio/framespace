@@ -1,5 +1,5 @@
 import ujson as json
-from flask import request, make_response
+from flask import request
 from flask_restful import Resource
 from bson import ObjectId
 
@@ -85,8 +85,8 @@ class DataFrame(Resource):
                    "major": {"keyspaceId": str(result['major']), "keys": []}, \
                    "minor": {"keyspaceId": str(result['minor']), "keys": []}, \
                    "contents": []}
-        return json.dumps(dataframe, ensure_ascii=False), 200, {'Content-Type': 'application/json'}
-
+ 	return util.buildResponse(dataframe)
+       
       elif jreq.page_end > len(vc) or len(jreq.new_minor.keys) > 0 or jreq.page_end == 0:
         jreq.page_end = len(vc)
 
@@ -129,13 +129,10 @@ class DataFrame(Resource):
                    "minor": {"keyspaceId": str(result['minor']), "keys": kmin_keys}, \
                    "contents": contents}
       print "data constructed, working on jsonifying"
-      resp = make_response(json.dumps(dataframe),200)
-      resp.content_type = 'application/json'
-      return resp
+      return util.buildResponse(dataframe)
  
     except Exception as e:
-      #return jsonify({500: str(e)})
-      return str(e)
+      return util.buildResponse({500: str(e)})
 
   def setDimensionFilters(self, major_keys, minor_keys, vec_filters):
     kmaj_keys = None
