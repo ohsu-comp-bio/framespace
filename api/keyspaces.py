@@ -6,16 +6,38 @@ from bson import ObjectId
 import util as util
 from proto.framespace import framespace_pb2 as fs
 
-from ccc_auth import validateRulesEngine
+from ccc_auth import validateRulesEngine, extractResource
 from functools import wraps
 
 from google.protobuf import json_format
 
+# /keyspaces
+# /keyspaces/valid
+# /keyspaces/valid?mask=true
+# /keyspaces?keyspaceIds=valid
+# /keyspaces?keyspacesIds=not,valid
+# /keyspaces?keyspacesIds=mask-keys,valid
+# /keyspaces?keyspacesIds=mask-keys,not,valid
+
+def ksidCheck(request):
+  # temp fix for v0.5
+  # if there is a query tring,
+  check = request.query_string
+  if check:
+    if check[:4] != 'mask':
+      return False
+  else:
+    if len(request.path.split('/')) < 3:
+      return False
+  return True
+
+
 def validate(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-      if not validateRulesEngine(request):
-        return abort(401)
+      if ksidCheck(request):
+        if not validateRulesEngine(request):
+          return abort(401)
       return func(*args, **kwargs)
     return wrapper
 
@@ -110,7 +132,8 @@ class KeySpaces(Resource):
       print json_format._MessageToJsonObject(jreq, True)
 
       # handle masks
-      mask = util.setMask(jreq.keys, unicode('mask'), "keys")
+      # mask = util.setMask(jreq.keys, unicode('mask'), "keys")
+      mask = {"keys": 0}
 
       # consolidate filters
       filters = {}
@@ -124,8 +147,9 @@ class KeySpaces(Resource):
       if len(jreq.keyspace_ids) > 0:
         filters['_id'] = util.getMongoFieldFilter(jreq.keyspace_ids, ObjectId, from_get=from_get)
       
-      if len(jreq.keys) > 0:
-        filters['keys'] = util.getMongoFieldFilter(jreq.keys, str, from_get=from_get)
+      # remove key filter for access control
+      #if len(jreq.keys) > 0:
+      #  filters['keys'] = util.getMongoFieldFilter(jreq.keys, str, from_get=from_get)
 
       result = self.db.keyspace.find(filters, mask)
 
