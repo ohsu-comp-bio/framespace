@@ -14,22 +14,21 @@ def extractToken(request):
 
 def extractResource(request):
   resource = request.path
-  print resource
+  # transform all resource requests to the /keyspaces/ID format
+  if resource.split("/")[1] != 'keyspaces':
+    if request.method == 'POST':
+      resource = "/keyspaces/"+json.loads(request.data)['keyspaceIds'][0]
+    else:
+      resource = '/keyspaces'
   if request.query_string:
-    resource += "?"+request.query_string
-  print "resource:", resource
+    resource += "/"+request.query_string.replace('keyspaceIds=','')
   return resource
-
-def keyspacesByPass(request):
-  pass
 
 def validateRulesEngine(request):
   """
   Pass token, action, and resource to the rules engine
   to validate the request
   """
-  print dir(request)
-  print request.url
   method = request.method
   resource = extractResource(request)
   jwt_token = extractToken(request)

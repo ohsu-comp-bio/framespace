@@ -6,7 +6,7 @@ from bson import ObjectId
 import util as util
 from proto.framespace import framespace_pb2 as fs
 
-from ccc_auth import validateRulesEngine, extractResource
+from ccc_auth import validateRulesEngine
 from functools import wraps
 
 from google.protobuf import json_format
@@ -19,25 +19,11 @@ from google.protobuf import json_format
 # /keyspaces?keyspacesIds=mask-keys,valid
 # /keyspaces?keyspacesIds=mask-keys,not,valid
 
-def ksidCheck(request):
-  # temp fix for v0.5
-  # if there is a query tring,
-  check = request.query_string
-  if check:
-    if check[:4] != 'mask':
-      return False
-  else:
-    if len(request.path.split('/')) < 3:
-      return False
-  return True
-
-
 def validate(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-      if ksidCheck(request):
-        if not validateRulesEngine(request):
-          return abort(401)
+      if not validateRulesEngine(request):
+        return abort(401)
       return func(*args, **kwargs)
     return wrapper
 
@@ -122,7 +108,6 @@ class KeySpaces(Resource):
     return self.searchKeySpaces(request.json)
 
 
-  @validate
   def searchKeySpaces(self, request, from_get=False):
 
     try:
