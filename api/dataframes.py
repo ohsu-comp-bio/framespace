@@ -41,7 +41,11 @@ class DataFrames(Resource):
     """
     GET /dataframes
     """
-    return self.searchDataFrames(dict(request.args), from_get=True)
+    check_ks = dict(request.args).get('keyspaceIds', None)
+    if check_ks is None or (len(check_ks) == 1 and check_ks[0] == unicode('mask-keys')):
+      return jsonify({500: 'keyspaceIds required when searching dataframes'})
+    else:
+      return self.searchDataFrames(dict(request.args), from_get=True)
 
 
   def post(self):
@@ -50,17 +54,18 @@ class DataFrames(Resource):
     Search for dataframes in FrameSpace registered to a given keyspace. 
     Contents omitted in return for clarity.
     """
-    return self.searchDataFrames(request.json)
+    check_ks = request.json.get('keyspaceIds', None)
+    if check_ks is None or (len(check_ks) == 1 and check_ks[0] == unicode('mask-keys')):
+      return jsonify({500: 'keyspaceIds required when searching dataframes'})
+    else:
+      return self.searchDataFrames(request.json)
+
 
   @validate
   def searchDataFrames(self, request, from_get=False):
     """
     DataFrame Search Function
     """
-    # enforce project level access control by enforcing restrictions on keyspaces
-    check_ks = request.get('keyspaceIds', None)
-    if check_ks is None or (len(check_ks) == 1 and check_ks[0] == unicode('mask-keys')):
-      return jsonify({500: 'keyspaceIds required when searching dataframes'})
 
     try:
 

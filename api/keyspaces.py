@@ -114,7 +114,6 @@ class KeySpaces(Resource):
 
       # get proto, validates
       jreq = util.fromJson(json.dumps(request), fs.SearchKeySpacesRequest)
-      print json_format._MessageToJsonObject(jreq, True)
 
       # handle masks
       # mask = util.setMask(jreq.keys, unicode('mask'), "keys")

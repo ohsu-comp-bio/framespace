@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from flask_restful import Resource
+from flask_restful import Resource, abort
 import json
 from bson import ObjectId
 
@@ -7,6 +7,17 @@ import util as util
 from proto.framespace import framespace_pb2 as fs
 from google.protobuf import json_format
 import pandas as pd
+
+from ccc_auth import validateRulesEngine
+from functools import wraps
+
+def validate(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+      if not validateRulesEngine(request):
+        return abort(401)
+      return func(*args, **kwargs)
+    return wrapper
 
 class DataFrame(Resource):
   """
@@ -39,7 +50,10 @@ class DataFrame(Resource):
     """
     transpose = bool(request.args.get('transpose', False))
     request_args = self.translateGetArgs(request, dataframe_id)
-    return self.sliceDataFrame(json.dumps(request_args), transpose=transpose)
+    if request_args.get('newMajor', None) is None or request_args['newMajor'].get('keyspaceId', None) is None:
+      return "newMajor keyspaceId is required for sliceDataframe.\n"
+    else:
+      return self.sliceDataFrame(json.dumps(request_args), transpose=transpose)
 
 
   def post(self):
@@ -55,9 +69,13 @@ class DataFrame(Resource):
     if request.json.get('dataframeId', None) is None:
       return "dataframeId required for sliceDataframe.\n"
 
+    if request.json.get('newMajor', None) is None or request.json['newMajor'].get('keyspaceId', None) is None:
+      return "newMajor keyspaceId is required for sliceDataframe.\n"
+
     return self.sliceDataFrame(json.dumps(request.json))
 
 
+  @validate
   def sliceDataFrame(self, request, transpose=False):
 
     try:
@@ -143,12 +161,15 @@ class DataFrame(Resource):
     """
     Handles json building for get args, for json <-> pb support
     """
-    d = {'dataframeId': dataframe_id}
+    d = {'dataframeId': dataframe_id, 'newMajor':{}}
     for arg in request.args:
       if arg[:4] == 'page':
         d[str(arg)] = int(request.args[arg][0])
       if arg[:3] == 'new':
-        d[str(arg)] = {'keys': request.args[arg].split(',')}
+        if arg[-4:] == 'Keys':
+          d['newMajor']['keys'] = request.args[arg].split(',')
+        if arg[-2:] == 'Id':
+          d['newMajor']['keyspaceId'] = str(request.args[arg])
     return d
 
 

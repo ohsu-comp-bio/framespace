@@ -17,11 +17,17 @@ def extractResource(request):
   # transform all resource requests to the /keyspaces/ID format
   if resource.split("/")[1] != 'keyspaces':
     if request.method == 'POST':
-      resource = "/keyspaces/"+json.loads(request.data)['keyspaceIds'][0]
+      try:
+        if json.loads(request.data)['keyspaceIds'][0] == "mask-keys": 
+          resource = "/keyspaces/"+json.loads(request.data)['keyspaceIds'][1]
+        else:
+          resource = "/keyspaces/"+json.loads(request.data)['keyspaceIds'][0]
+      except:
+        resource = "/keyspaces/"+json.loads(request.data)['newMajor']['keyspaceId']
     else:
       resource = '/keyspaces'
   if request.query_string:
-    resource += "/"+request.query_string.replace('keyspaceIds=','')
+    resource += "/"+request.query_string.replace('keyspaceIds=','').replace('newMajorId=', '')
   return resource
 
 def validateRulesEngine(request):
