@@ -16,19 +16,18 @@ def extractResource(request):
   resource = request.path
   # transform all resource requests to the /keyspaces/ID format
   if resource.split("/")[1] != 'keyspaces':
+    resource = '/keyspaces'
     if request.method == 'POST':
+      request_data = json.loads(request.data)
       try:
-        if json.loads(request.data)['keyspaceIds'][0] == "mask-keys": 
-          resource = "/keyspaces/"+json.loads(request.data)['keyspaceIds'][1]
-        else:
-          resource = "/keyspaces/"+json.loads(request.data)['keyspaceIds'][0]
+        # /dataframes/search
+        request_data['keyspaceIds'].remove('mask-keys')
+        resource = "/".join([resource, request_data['keyspaceIds'][0]])
       except:
-        resource = "/keyspaces/"+json.loads(request.data)['newMajor']['keyspaceId']
-    else:
-      resource = '/keyspaces'
+        # /dataframe/slice
+        resource = "/".join([resource,request_data['newMajor']['keyspaceId']])
   if request.query_string:
     resource += "/"+request.query_string.replace('keyspaceIds=','').replace('newMajorId=', '')
-  return resource
 
 def validateRulesEngine(request):
   """
