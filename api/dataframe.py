@@ -3,7 +3,7 @@ from flask_restful import Resource
 import json
 from bson import ObjectId
 
-from api.exceptions import JsonRequiredException, NotFoundException
+from api.exceptions import JsonRequiredException, NotFoundException, BadRequestException
 import util as util
 from proto.framespace import framespace_pb2 as fs
 from google.protobuf import json_format
