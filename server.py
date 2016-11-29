@@ -18,19 +18,19 @@ api = Api(application)
 try:
   mongo = MongoClient(os.environ['DB_PORT_27017_TCP_ADDR'], 27017, connect=False)
 except:
-  mongo = MongoClient('0.0.0.0', 27017)
+  mongo = MongoClient('0.0.0.0', 27017, connect=False)
 
 db = mongo['framespace']
 
-api.add_resource(Axes, '/framespace/axes', '/framespace/axes/search', resource_class_kwargs={'db': db})
-api.add_resource(Axis, '/framespace/axes/<name>', resource_class_kwargs={'db': db})
-api.add_resource(Units, '/framespace/units', '/framespace/units/search', resource_class_kwargs={'db': db})
-api.add_resource(Unit, '/framespace/units/<name>', resource_class_kwargs={'db': db})
-api.add_resource(KeySpace, '/framespace/keyspaces/<keyspace_id>', resource_class_kwargs={'db': db})
-api.add_resource(KeySpaces, '/framespace/keyspaces', '/framespace/keyspaces/search', resource_class_kwargs={'db': db})
-api.add_resource(DataFrames, '/framespace/dataframes', '/framespace/dataframes/search', resource_class_kwargs={'db': db})
-api.add_resource(DataFrame, '/framespace/dataframe/<dataframe_id>', '/framespace/dataframe/slice', resource_class_kwargs={'db': db})
-api.add_resource(Transpose, '/framespace/dataframe/transpose/<dataframe_id>', resource_class_kwargs={'db': db})
+api.add_resource(Axes, '/axes', '/axes/search', resource_class_kwargs={'db': db})
+api.add_resource(Axis, '/axes/<name>', resource_class_kwargs={'db': db})
+api.add_resource(Units, '/units', '/units/search', resource_class_kwargs={'db': db})
+api.add_resource(Unit, '/units/<name>', resource_class_kwargs={'db': db})
+api.add_resource(KeySpace, '/keyspaces/<keyspace_id>', resource_class_kwargs={'db': db})
+api.add_resource(KeySpaces, '/keyspaces', '/keyspaces/search', resource_class_kwargs={'db': db})
+api.add_resource(DataFrames, '/dataframes', '/dataframes/search', resource_class_kwargs={'db': db})
+api.add_resource(DataFrame, '/dataframe/<dataframe_id>', '/dataframe/slice', resource_class_kwargs={'db': db})
+api.add_resource(Transpose, '/dataframe/transpose/<dataframe_id>', resource_class_kwargs={'db': db})
 
 
 if __name__ == '__main__':
