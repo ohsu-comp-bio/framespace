@@ -3,7 +3,7 @@ from flask_restful import Resource
 import json
 from bson import ObjectId
 
-from api.exceptions import JsonRequiredException
+from api.exceptions import JsonRequiredException, KeySpaceNotFoundException
 import util
 from proto.framespace import framespace_pb2 as fs
 
@@ -43,7 +43,7 @@ class KeySpace(Resource):
 
         return util.toFlaskJson(_keyspace)
       else:
-        return jsonify({})
+        raise KeySpaceNotFoundException(keyspace_id)
 
 
 class KeySpaces(Resource):

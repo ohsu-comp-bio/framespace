@@ -3,7 +3,7 @@ from flask_restful import Resource
 import json
 from bson import ObjectId
 
-from api.exceptions import JsonRequiredException, NotFoundException, BadRequestException
+from api.exceptions import JsonRequiredException, DataFrameNotFoundException, BadRequestException
 import util as util
 from proto.framespace import framespace_pb2 as fs
 from google.protobuf import json_format
@@ -70,8 +70,7 @@ class DataFrame(Resource):
     result = self.db.dataframe.find_one({"_id": ObjectId(str(jreq.dataframe_id))})
 
     if result is None:
-      msg = "Dataframe not found for ID = {}".format(jreq.dataframe_id)
-      raise NotFoundException(msg)
+      raise DataFrameNotFoundException(jreq.dataframe_id)
 
     # prep vector query
     vc = result.get('contents', [])
