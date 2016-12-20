@@ -132,13 +132,11 @@ class Connector:
           ndf = self.dataframe.insert_one({"major": md_ks['_id'], "minor": ksminor_objid, "units": units, "contents": [vector.inserted_id]})
           return ndf.inserted_id
       else:
-	print "No keyspace belonging to the key {0}.".format([df['key']])
+        print "No keyspace belonging to the key {0}.".format([df['key']])
 
     else:
-      print self.port
       keys = df.columns.tolist()[1:]
       md_ks = self.keyspace.find_one({"keys": {"$regex": keys[0]}})
-      print keys[0]
       if md_ks is not None:
         # vectors are inserted into dataframe as ids to get around data storage limit
         vectors = self.vector.insert_many(map(createVectorClos(md_ks['_id'], ksminor_objid, units), df.reset_index().to_dict(orient='records')))

@@ -40,7 +40,6 @@ class Importer:
           dfs = [json.loads(re.sub(self.config.ksemb_id, 'contents', re.sub('barcode', self.rename[self.config.ksemb_id], str(line), 1), 1)) for line in j]
           init_df = dfs[0]
           tsv_files = dfs[1:]
-          print len(tsv_files)
           del dfs
 
       else:
@@ -83,7 +82,7 @@ def poolLoadTSV((tsv, ks_minor, units, db, ksm_filter, ksm_id, rename, host, por
   
   except Exception, e:
     traceback.print_exc(file=sys.stdout)
-    # print "Error processing {0}".format(tsv)
+
     print "Error processing"
     print str(e)
     return (-1, tsv)
