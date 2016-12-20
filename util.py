@@ -6,6 +6,7 @@ import ujson as json
 from flask import request, make_response, jsonify
 from google.protobuf import json_format
 from bson import ObjectId
+from api.exceptions import BadRequestException
 
 def buildResponse(data):
   resp = make_response(json.dumps(data), 200)
@@ -28,7 +29,10 @@ def fromJson(json, protoClass):
     """
     Deserialise json into an instance of protobuf class
     """
-    return json_format.Parse(json, protoClass())
+    try:
+      return json_format.Parse(json, protoClass())
+    except Exception as e:
+      raise BadRequestException(str(e))
 
 def getMongoFieldFilter(filterList, maptype, from_get=False):
 
