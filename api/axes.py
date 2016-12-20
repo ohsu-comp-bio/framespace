@@ -5,6 +5,7 @@ from bson import ObjectId
 
 import util as util
 from proto.framespace import framespace_pb2 as fs
+from api.exceptions import AxisNotFoundException
 
 class Axis(Resource):
   """
@@ -25,9 +26,11 @@ class Axis(Resource):
     Return axis with a given name
     """
     result = self.db.axis.find_one({"name": str(name)})
-
-    _axis = fs.Axis()
-    _axis = fs.Axis(name=result['name'], description=result['description'])
+    if result is not None:
+      _axis = fs.Axis()
+      _axis = fs.Axis(name=result['name'], description=result['description'])
+    else:
+      raise AxisNotFoundException(name)
 
     return util.toFlaskJson(_axis)
 
