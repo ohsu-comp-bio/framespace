@@ -5,6 +5,7 @@ from bson import ObjectId
 
 import util as util
 from proto.framespace import framespace_pb2 as fs
+from api.exceptions import UnitNotFoundException
 
 class Unit(Resource):
   """
@@ -26,17 +27,14 @@ class Unit(Resource):
     GET /units/name
     """
 
-    try:
-      result = self.db.units.find_one({"name": str(name)})
-      # make proto
-      if result:
-        _unit = fs.Unit(id=str(result['_id']), name=result['name'], description=result['description'])
-        return util.toFlaskJson(_unit)
-      else:
-        return jsonify({})
+    result = self.db.units.find_one({"name": str(name)})
+    # make proto
+    if result:
+      _unit = fs.Unit(id=str(result['_id']), name=result['name'], description=result['description'])
+    else:
+      raise UnitNotFoundException(name)
 
-    except Exception as e:
-      return "".join([str(e), "\n"])
+    return util.toFlaskJson(_unit)
 
 
 class Units(Resource):
@@ -71,31 +69,25 @@ class Units(Resource):
     
 
   def searchUnits(self, request, from_get=False):
-    try:
+    # get proto, validates
+    jreq = util.fromJson(json.dumps(request), fs.SearchUnitsRequest)
 
-      print request
-      # get proto, validates
-      jreq = util.fromJson(json.dumps(request), fs.SearchUnitsRequest)
+    filters = {}
+    # query backend
+    if len(jreq.names) > 0:
+      filters['name'] = util.getMongoFieldFilter(jreq.names, str, from_get=from_get)
 
-      filters = {}
-      # query backend
-      if len(jreq.names) > 0:
-        filters['name'] = util.getMongoFieldFilter(jreq.names, str, from_get=from_get)
+    if len(jreq.ids) > 0:
+      filters['_id'] = util.getMongoFieldFilter(jreq.ids, ObjectId, from_get=from_get)
 
-      if len(jreq.ids) > 0:
-        filters['_id'] = util.getMongoFieldFilter(jreq.ids, ObjectId, from_get=from_get)
+    if len(filters) > 0:
+      result = self.db.units.find(filters)
+    else:
+      result = self.db.units.find()
 
-      if len(filters) > 0:
-        result = self.db.units.find(filters)
-      else:
-        result = self.db.units.find()
+    # make proto
+    _protoresp = fs.SearchUnitsResponse()
+    for r in result:
+      _protoresp.units.add(name=r['name'], description=r['description'], id=str(r['_id']))
 
-      # make proto
-      _protoresp = fs.SearchUnitsResponse()
-      for r in result:
-        _protoresp.units.add(name=r['name'], description=r['description'], id=str(r['_id']))
-
-      return util.toFlaskJson(_protoresp)
-
-    except Exception as e:
-      return "".join([str(e), "\n"])
+    return util.toFlaskJson(_protoresp)

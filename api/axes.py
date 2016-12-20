@@ -5,6 +5,7 @@ from bson import ObjectId
 
 import util as util
 from proto.framespace import framespace_pb2 as fs
+from api.exceptions import AxisNotFoundException
 
 class Axis(Resource):
   """
@@ -24,16 +25,13 @@ class Axis(Resource):
     GET /axes/name
     Return axis with a given name
     """
-    try:
-      result = self.db.axis.find_one({"name": str(name)})
-
-      _axis = fs.Axis()
+    result = self.db.axis.find_one({"name": str(name)})
+    if result:
       _axis = fs.Axis(name=result['name'], description=result['description'])
-        
-      return util.toFlaskJson(_axis)
+    else:
+      raise AxisNotFoundException(name)
 
-    except Exception as e:
-      return "".join([str(e), "\n"])
+    return util.toFlaskJson(_axis)
 
 
 class Axes(Resource):
@@ -69,24 +67,18 @@ class Axes(Resource):
     return self.axesSearch(req)
 
   def axesSearch(self, request, from_get=False):
+    # get proto, validates
+    jreq = util.fromJson(json.dumps(request), fs.SearchAxesRequest)
 
-    try:
-      # get proto, validates
-      jreq = util.fromJson(json.dumps(request), fs.SearchAxesRequest)
+    # query backend
+    if len(jreq.names) > 0:
+      result = self.db.axis.find({"name": util.getMongoFieldFilter(jreq.names, str, from_get=from_get)})
+    else:
+      result = self.db.axis.find()
 
-      # query backend
-      if len(jreq.names) > 0:
-        result = self.db.axis.find({"name": util.getMongoFieldFilter(jreq.names, str, from_get=from_get)})
-      else:
-        result = self.db.axis.find()
+    # make proto
+    _protoresp = fs.SearchAxesResponse()
+    for r in result:
+      _protoresp.axes.add(name=r['name'], description=r['description'])
 
-      # make proto
-      _protoresp = fs.SearchAxesResponse()
-      for r in result:
-        _protoresp.axes.add(name=r['name'], description=r['description'])
-
-      return util.toFlaskJson(_protoresp)
-
-    except Exception as e:
-      return "".join([str(e), "\n"])
-
+    return util.toFlaskJson(_protoresp)
