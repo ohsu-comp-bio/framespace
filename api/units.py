@@ -5,6 +5,7 @@ from bson import ObjectId
 
 import util as util
 from proto.framespace import framespace_pb2 as fs
+from api.exceptions import UnitNotFoundException
 
 class Unit(Resource):
   """
@@ -30,9 +31,10 @@ class Unit(Resource):
     # make proto
     if result:
       _unit = fs.Unit(id=str(result['_id']), name=result['name'], description=result['description'])
-      return util.toFlaskJson(_unit)
     else:
-      return jsonify({})
+      raise UnitNotFoundException(name)
+
+    return util.toFlaskJson(_unit)
 
 
 class Units(Resource):

@@ -26,8 +26,7 @@ class Axis(Resource):
     Return axis with a given name
     """
     result = self.db.axis.find_one({"name": str(name)})
-    if result is not None:
-      _axis = fs.Axis()
+    if result:
       _axis = fs.Axis(name=result['name'], description=result['description'])
     else:
       raise AxisNotFoundException(name)
