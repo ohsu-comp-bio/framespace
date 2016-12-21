@@ -11,15 +11,14 @@ from api.keyspaces import KeySpace, KeySpaces
 from api.dataframes import DataFrames
 from api.dataframe import DataFrame, Transpose
 
-# name passed to flask app will bind to db
-app = Flask('framespace')
+app = Flask(__name__)
 api = FramespaceApi(app)
 
 # if not docker, then run locally
 try:
-  mongo = MongoClient(os.environ['DB_PORT_27017_TCP_ADDR'], 27017)
+  mongo = MongoClient(os.environ['DB_PORT_27017_TCP_ADDR'], 27017, connect=False)
 except:
-  mongo = MongoClient()
+  mongo = MongoClient('0.0.0.0', 27017, connect=False)
 
 db = mongo['framespace']
 
@@ -35,4 +34,4 @@ api.add_resource(Transpose, '/dataframe/transpose/<dataframe_id>', resource_clas
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', threaded=True, debug=True)

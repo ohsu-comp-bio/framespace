@@ -1,6 +1,6 @@
-from flask import request, jsonify
+import ujson as json
+from flask import request
 from flask_restful import Resource
-import json
 from bson import ObjectId
 
 from api.exceptions import JsonRequiredException, DataFrameNotFoundException, BadRequestException
@@ -53,15 +53,16 @@ class DataFrame(Resource):
     if request.json is None:
       raise JsonRequiredException()
 
-    return self.sliceDataFrame(request.data)
+    return self.sliceDataFrame(json.dumps(request.json))
 
 
-  def sliceDataFrame(self, json_string, transpose=False):
+  def sliceDataFrame(self, request, transpose=False):
+
     # inits
     vec_filters = {}
 
     # validate request
-    jreq = util.fromJson(json_string, fs.SliceDataFrameRequest)
+    jreq = util.fromJson(request, fs.SliceDataFrameRequest)
 
     if not jreq.dataframe_id:
       raise BadRequestException("dataframeId is required for sliceDataFrame")
@@ -74,19 +75,17 @@ class DataFrame(Resource):
 
     # prep vector query
     vc = result.get('contents', [])
-
+    
     # save page end for later check
     page_end = int(jreq.page_end)
     # if page start is outside of dataframe length, return empty
     if jreq.page_start > len(vc):
-      dataframe = {
-        "id": str(result["_id"]),
-        "major": {"keyspaceId": str(result['major']), "keys": []},
-        "minor": {"keyspaceId": str(result['minor']), "keys": []},
-        "contents": []
-      }
-      return jsonify(dataframe)
-
+      dataframe = {"id": str(result["_id"]), \
+                 "major": {"keyspaceId": str(result['major']), "keys": []}, \
+                 "minor": {"keyspaceId": str(result['minor']), "keys": []}, \
+                 "contents": []}
+      return util.buildResponse(dataframe)
+     
     elif jreq.page_end > len(vc) or len(jreq.new_minor.keys) > 0 or jreq.page_end == 0:
       jreq.page_end = len(vc)
 
@@ -126,8 +125,8 @@ class DataFrame(Resource):
                  "minor": {"keyspaceId": str(result['minor']), "keys": kmin_keys}, \
                  "contents": contents}
 
-    return jsonify(dataframe)
-
+    return util.buildResponse(dataframe)
+ 
 
   def setDimensionFilters(self, major_keys, minor_keys, vec_filters):
     kmaj_keys = None
