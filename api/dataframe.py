@@ -61,8 +61,8 @@ class DataFrame(Resource):
     jreq = util.fromJson(request, fs.BuildDataFrameRequest)
     print json_format._MessageToJsonObject(jreq, True)
 
-    major_keyspaces = [dimension.keyspace_id for dimension in jreq.major]
-    minor_keyspaces = [dimension.keyspace_id for dimension in jreq.minor]
+    major_keyspaces = [keyset.keyspace_id for keyset in jreq.major]
+    minor_keyspaces = [keyset.keyspace_id for keyset in jreq.minor]
 
     unit_ids = [unit.id for unit in jreq.units]
 
@@ -74,11 +74,11 @@ class DataFrame(Resource):
     filters.setdefault('$and',[])
     if len(major_keyspaces) > 0:
       filters['$and'].append({'majks': util.getMongoFieldFilter(major_keyspaces, ObjectId)})
-      major_keys = self.setDimensionFilters(jreq.major, [key for key in dimension.keys for dimension in jreq.major])
+      major_keys = self.setDimensionFilters(jreq.major, [key for key in keyset.keys for keyset in jreq.major])
     
     if len(minor_keyspaces) > 0:
       filters['$and'].append({'minks': util.getMongoFieldFilter(minor_keyspaces, ObjectId)})
-      minor_keys = [key for key in dimension.keys for dimension in jreq.minor]
+      minor_keys = [key for key in keyset.keys for keyset in jreq.minor]
     
     if len(unit_ids) > 0:
       filters['$and'].append({'units': util.getMongoFieldFilter(unit_ids, ObjectId)})
