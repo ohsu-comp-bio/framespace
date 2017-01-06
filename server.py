@@ -8,8 +8,7 @@ from api import FramespaceApi
 from api.units import Units, Unit
 from api.axes import Axis, Axes
 from api.keyspaces import KeySpace, KeySpaces
-from api.dataframes import DataFrames
-from api.dataframe import DataFrame, Transpose
+from api.dataframe import DataFrame
 
 app = Flask(__name__)
 api = FramespaceApi(app)
@@ -28,9 +27,7 @@ api.add_resource(Units, '/units', '/units/search', resource_class_kwargs={'db': 
 api.add_resource(Unit, '/units/<name>', resource_class_kwargs={'db': db})
 api.add_resource(KeySpace, '/keyspaces/<keyspace_id>', resource_class_kwargs={'db': db})
 api.add_resource(KeySpaces, '/keyspaces', '/keyspaces/search', resource_class_kwargs={'db': db})
-api.add_resource(DataFrames, '/dataframes', '/dataframes/search', resource_class_kwargs={'db': db})
-api.add_resource(DataFrame, '/dataframe/<dataframe_id>', '/dataframe/slice', resource_class_kwargs={'db': db})
-api.add_resource(Transpose, '/dataframe/transpose/<dataframe_id>', resource_class_kwargs={'db': db})
+api.add_resource(DataFrame, '/dataframe', resource_class_kwargs={'db': db})
 
 
 if __name__ == '__main__':

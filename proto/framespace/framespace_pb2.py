@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='proto/framespace/framespace.proto',
   package='framespace',
   syntax='proto3',
-  serialized_pb=_b('\n!proto/framespace/framespace.proto\x12\nframespace\x1a\x1cgoogle/protobuf/struct.proto\")\n\x04\x41xis\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\"I\n\x11SearchAxesRequest\x12\r\n\x05names\x18\x01 \x03(\t\x12\x11\n\tpage_size\x18\x02 \x01(\x05\x12\x12\n\npage_token\x18\x03 \x01(\t\"M\n\x12SearchAxesResponse\x12\x1e\n\x04\x61xes\x18\x01 \x03(\x0b\x32\x10.framespace.Axis\x12\x17\n\x0fnext_page_token\x18\x02 \x01(\t\"\xac\x01\n\x08KeySpace\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x11\n\taxis_name\x18\x03 \x01(\t\x12\x0c\n\x04keys\x18\x04 \x03(\t\x12\x34\n\x08metadata\x18\x05 \x03(\x0b\x32\".framespace.KeySpace.MetadataEntry\x1a/\n\rMetadataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\x86\x01\n\x16SearchKeySpacesRequest\x12\x14\n\x0ckeyspace_ids\x18\x01 \x03(\t\x12\r\n\x05names\x18\x02 \x03(\t\x12\x12\n\naxis_names\x18\x03 \x03(\t\x12\x0c\n\x04keys\x18\x04 \x03(\t\x12\x11\n\tpage_size\x18\x05 \x01(\x05\x12\x12\n\npage_token\x18\x06 \x01(\t\"[\n\x17SearchKeySpacesResponse\x12\'\n\tkeyspaces\x18\x01 \x03(\x0b\x32\x14.framespace.KeySpace\x12\x17\n\x0fnext_page_token\x18\x02 \x01(\t\".\n\tDimension\x12\x13\n\x0bkeyspace_id\x18\x01 \x01(\t\x12\x0c\n\x04keys\x18\x02 \x03(\t\"5\n\x04Unit\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x03 \x01(\t\"W\n\x12SearchUnitsRequest\x12\x0b\n\x03ids\x18\x01 \x03(\t\x12\r\n\x05names\x18\x02 \x03(\t\x12\x11\n\tpage_size\x18\x03 \x01(\x05\x12\x12\n\npage_token\x18\x04 \x01(\t\"O\n\x13SearchUnitsResponse\x12\x1f\n\x05units\x18\x01 \x03(\x0b\x32\x10.framespace.Unit\x12\x17\n\x0fnext_page_token\x18\x02 \x01(\t\"\xed\x02\n\tDataFrame\x12\n\n\x02id\x18\x01 \x01(\t\x12$\n\x05major\x18\x02 \x01(\x0b\x32\x15.framespace.Dimension\x12$\n\x05minor\x18\x03 \x01(\x0b\x32\x15.framespace.Dimension\x12\x1f\n\x05units\x18\x04 \x03(\x0b\x32\x10.framespace.Unit\x12\x35\n\x08metadata\x18\x05 \x03(\x0b\x32#.framespace.DataFrame.MetadataEntry\x12\x35\n\x08\x63ontents\x18\x06 \x03(\x0b\x32#.framespace.DataFrame.ContentsEntry\x1a/\n\rMetadataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1aH\n\rContentsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12&\n\x05value\x18\x02 \x01(\x0b\x32\x17.google.protobuf.Struct:\x02\x38\x01\"\x7f\n\x17SearchDataFramesRequest\x12\x15\n\rdataframe_ids\x18\x01 \x03(\t\x12\x14\n\x0ckeyspace_ids\x18\x02 \x03(\t\x12\x10\n\x08unit_ids\x18\x03 \x03(\t\x12\x11\n\tpage_size\x18\x04 \x01(\x05\x12\x12\n\npage_token\x18\x05 \x01(\t\"^\n\x18SearchDataFramesResponse\x12)\n\ndataframes\x18\x01 \x03(\x0b\x32\x15.framespace.DataFrame\x12\x17\n\x0fnext_page_token\x18\x02 \x01(\t\"~\n\x15SliceDataFrameRequest\x12(\n\tnew_major\x18\x01 \x03(\x0b\x32\x15.framespace.Dimension\x12(\n\tnew_minor\x18\x02 \x03(\x0b\x32\x15.framespace.Dimension\x12\x11\n\tpage_size\x18\x03 \x01(\x05\x62\x06proto3')
+  serialized_pb=_b('\n!proto/framespace/framespace.proto\x12\nframespace\x1a\x1cgoogle/protobuf/struct.proto\")\n\x04\x41xis\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\"I\n\x11SearchAxesRequest\x12\r\n\x05names\x18\x01 \x03(\t\x12\x11\n\tpage_size\x18\x02 \x01(\x05\x12\x12\n\npage_token\x18\x03 \x01(\t\"M\n\x12SearchAxesResponse\x12\x1e\n\x04\x61xes\x18\x01 \x03(\x0b\x32\x10.framespace.Axis\x12\x17\n\x0fnext_page_token\x18\x02 \x01(\t\"\xac\x01\n\x08KeySpace\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x11\n\taxis_name\x18\x03 \x01(\t\x12\x0c\n\x04keys\x18\x04 \x03(\t\x12\x34\n\x08metadata\x18\x05 \x03(\x0b\x32\".framespace.KeySpace.MetadataEntry\x1a/\n\rMetadataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\x86\x01\n\x16SearchKeySpacesRequest\x12\x14\n\x0ckeyspace_ids\x18\x01 \x03(\t\x12\r\n\x05names\x18\x02 \x03(\t\x12\x12\n\naxis_names\x18\x03 \x03(\t\x12\x0c\n\x04keys\x18\x04 \x03(\t\x12\x11\n\tpage_size\x18\x05 \x01(\x05\x12\x12\n\npage_token\x18\x06 \x01(\t\"[\n\x17SearchKeySpacesResponse\x12\'\n\tkeyspaces\x18\x01 \x03(\x0b\x32\x14.framespace.KeySpace\x12\x17\n\x0fnext_page_token\x18\x02 \x01(\t\".\n\tDimension\x12\x13\n\x0bkeyspace_id\x18\x01 \x01(\t\x12\x0c\n\x04keys\x18\x02 \x03(\t\"5\n\x04Unit\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x03 \x01(\t\"W\n\x12SearchUnitsRequest\x12\x0b\n\x03ids\x18\x01 \x03(\t\x12\r\n\x05names\x18\x02 \x03(\t\x12\x11\n\tpage_size\x18\x03 \x01(\x05\x12\x12\n\npage_token\x18\x04 \x01(\t\"O\n\x13SearchUnitsResponse\x12\x1f\n\x05units\x18\x01 \x03(\x0b\x32\x10.framespace.Unit\x12\x17\n\x0fnext_page_token\x18\x02 \x01(\t\"\x80\x02\n\tDataFrame\x12\n\n\x02id\x18\x01 \x01(\t\x12\x35\n\x08metadata\x18\x05 \x03(\x0b\x32#.framespace.DataFrame.MetadataEntry\x12\x35\n\x08\x63ontents\x18\x06 \x03(\x0b\x32#.framespace.DataFrame.ContentsEntry\x1a/\n\rMetadataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1aH\n\rContentsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12&\n\x05value\x18\x02 \x01(\x0b\x32\x17.google.protobuf.Struct:\x02\x38\x01\"\x97\x01\n\x15\x42uildDataFrameRequest\x12$\n\x05major\x18\x01 \x03(\x0b\x32\x15.framespace.Dimension\x12$\n\x05minor\x18\x02 \x03(\x0b\x32\x15.framespace.Dimension\x12\x1f\n\x05units\x18\x03 \x03(\x0b\x32\x10.framespace.Unit\x12\x11\n\tpage_size\x18\x04 \x01(\x05\x62\x06proto3')
   ,
   dependencies=[google_dot_protobuf_dot_struct__pb2.DESCRIPTOR,])
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
@@ -592,8 +592,8 @@ _DATAFRAME_CONTENTSENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1248,
-  serialized_end=1320,
+  serialized_start=1139,
+  serialized_end=1211,
 )
 
 _DATAFRAME = _descriptor.Descriptor(
@@ -611,35 +611,14 @@ _DATAFRAME = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='major', full_name='framespace.DataFrame.major', index=1,
-      number=2, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    _descriptor.FieldDescriptor(
-      name='minor', full_name='framespace.DataFrame.minor', index=2,
-      number=3, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    _descriptor.FieldDescriptor(
-      name='units', full_name='framespace.DataFrame.units', index=3,
-      number=4, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    _descriptor.FieldDescriptor(
-      name='metadata', full_name='framespace.DataFrame.metadata', index=4,
+      name='metadata', full_name='framespace.DataFrame.metadata', index=1,
       number=5, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='contents', full_name='framespace.DataFrame.contents', index=5,
+      name='contents', full_name='framespace.DataFrame.contents', index=2,
       number=6, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
@@ -658,131 +637,41 @@ _DATAFRAME = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=955,
-  serialized_end=1320,
+  serialized_end=1211,
 )
 
 
-_SEARCHDATAFRAMESREQUEST = _descriptor.Descriptor(
-  name='SearchDataFramesRequest',
-  full_name='framespace.SearchDataFramesRequest',
+_BUILDDATAFRAMEREQUEST = _descriptor.Descriptor(
+  name='BuildDataFrameRequest',
+  full_name='framespace.BuildDataFrameRequest',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='dataframe_ids', full_name='framespace.SearchDataFramesRequest.dataframe_ids', index=0,
-      number=1, type=9, cpp_type=9, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    _descriptor.FieldDescriptor(
-      name='keyspace_ids', full_name='framespace.SearchDataFramesRequest.keyspace_ids', index=1,
-      number=2, type=9, cpp_type=9, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    _descriptor.FieldDescriptor(
-      name='unit_ids', full_name='framespace.SearchDataFramesRequest.unit_ids', index=2,
-      number=3, type=9, cpp_type=9, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    _descriptor.FieldDescriptor(
-      name='page_size', full_name='framespace.SearchDataFramesRequest.page_size', index=3,
-      number=4, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    _descriptor.FieldDescriptor(
-      name='page_token', full_name='framespace.SearchDataFramesRequest.page_token', index=4,
-      number=5, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=1322,
-  serialized_end=1449,
-)
-
-
-_SEARCHDATAFRAMESRESPONSE = _descriptor.Descriptor(
-  name='SearchDataFramesResponse',
-  full_name='framespace.SearchDataFramesResponse',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='dataframes', full_name='framespace.SearchDataFramesResponse.dataframes', index=0,
+      name='major', full_name='framespace.BuildDataFrameRequest.major', index=0,
       number=1, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='next_page_token', full_name='framespace.SearchDataFramesResponse.next_page_token', index=1,
-      number=2, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=1451,
-  serialized_end=1545,
-)
-
-
-_SLICEDATAFRAMEREQUEST = _descriptor.Descriptor(
-  name='SliceDataFrameRequest',
-  full_name='framespace.SliceDataFrameRequest',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='new_major', full_name='framespace.SliceDataFrameRequest.new_major', index=0,
-      number=1, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None),
-    _descriptor.FieldDescriptor(
-      name='new_minor', full_name='framespace.SliceDataFrameRequest.new_minor', index=1,
+      name='minor', full_name='framespace.BuildDataFrameRequest.minor', index=1,
       number=2, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='page_size', full_name='framespace.SliceDataFrameRequest.page_size', index=2,
-      number=3, type=5, cpp_type=1, label=1,
+      name='units', full_name='framespace.BuildDataFrameRequest.units', index=2,
+      number=3, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='page_size', full_name='framespace.BuildDataFrameRequest.page_size', index=3,
+      number=4, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -799,8 +688,8 @@ _SLICEDATAFRAMEREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1547,
-  serialized_end=1673,
+  serialized_start=1214,
+  serialized_end=1365,
 )
 
 _SEARCHAXESRESPONSE.fields_by_name['axes'].message_type = _AXIS
@@ -811,14 +700,11 @@ _SEARCHUNITSRESPONSE.fields_by_name['units'].message_type = _UNIT
 _DATAFRAME_METADATAENTRY.containing_type = _DATAFRAME
 _DATAFRAME_CONTENTSENTRY.fields_by_name['value'].message_type = google_dot_protobuf_dot_struct__pb2._STRUCT
 _DATAFRAME_CONTENTSENTRY.containing_type = _DATAFRAME
-_DATAFRAME.fields_by_name['major'].message_type = _DIMENSION
-_DATAFRAME.fields_by_name['minor'].message_type = _DIMENSION
-_DATAFRAME.fields_by_name['units'].message_type = _UNIT
 _DATAFRAME.fields_by_name['metadata'].message_type = _DATAFRAME_METADATAENTRY
 _DATAFRAME.fields_by_name['contents'].message_type = _DATAFRAME_CONTENTSENTRY
-_SEARCHDATAFRAMESRESPONSE.fields_by_name['dataframes'].message_type = _DATAFRAME
-_SLICEDATAFRAMEREQUEST.fields_by_name['new_major'].message_type = _DIMENSION
-_SLICEDATAFRAMEREQUEST.fields_by_name['new_minor'].message_type = _DIMENSION
+_BUILDDATAFRAMEREQUEST.fields_by_name['major'].message_type = _DIMENSION
+_BUILDDATAFRAMEREQUEST.fields_by_name['minor'].message_type = _DIMENSION
+_BUILDDATAFRAMEREQUEST.fields_by_name['units'].message_type = _UNIT
 DESCRIPTOR.message_types_by_name['Axis'] = _AXIS
 DESCRIPTOR.message_types_by_name['SearchAxesRequest'] = _SEARCHAXESREQUEST
 DESCRIPTOR.message_types_by_name['SearchAxesResponse'] = _SEARCHAXESRESPONSE
@@ -830,9 +716,7 @@ DESCRIPTOR.message_types_by_name['Unit'] = _UNIT
 DESCRIPTOR.message_types_by_name['SearchUnitsRequest'] = _SEARCHUNITSREQUEST
 DESCRIPTOR.message_types_by_name['SearchUnitsResponse'] = _SEARCHUNITSRESPONSE
 DESCRIPTOR.message_types_by_name['DataFrame'] = _DATAFRAME
-DESCRIPTOR.message_types_by_name['SearchDataFramesRequest'] = _SEARCHDATAFRAMESREQUEST
-DESCRIPTOR.message_types_by_name['SearchDataFramesResponse'] = _SEARCHDATAFRAMESRESPONSE
-DESCRIPTOR.message_types_by_name['SliceDataFrameRequest'] = _SLICEDATAFRAMEREQUEST
+DESCRIPTOR.message_types_by_name['BuildDataFrameRequest'] = _BUILDDATAFRAMEREQUEST
 
 Axis = _reflection.GeneratedProtocolMessageType('Axis', (_message.Message,), dict(
   DESCRIPTOR = _AXIS,
@@ -935,26 +819,12 @@ _sym_db.RegisterMessage(DataFrame)
 _sym_db.RegisterMessage(DataFrame.MetadataEntry)
 _sym_db.RegisterMessage(DataFrame.ContentsEntry)
 
-SearchDataFramesRequest = _reflection.GeneratedProtocolMessageType('SearchDataFramesRequest', (_message.Message,), dict(
-  DESCRIPTOR = _SEARCHDATAFRAMESREQUEST,
+BuildDataFrameRequest = _reflection.GeneratedProtocolMessageType('BuildDataFrameRequest', (_message.Message,), dict(
+  DESCRIPTOR = _BUILDDATAFRAMEREQUEST,
   __module__ = 'proto.framespace.framespace_pb2'
-  # @@protoc_insertion_point(class_scope:framespace.SearchDataFramesRequest)
+  # @@protoc_insertion_point(class_scope:framespace.BuildDataFrameRequest)
   ))
-_sym_db.RegisterMessage(SearchDataFramesRequest)
-
-SearchDataFramesResponse = _reflection.GeneratedProtocolMessageType('SearchDataFramesResponse', (_message.Message,), dict(
-  DESCRIPTOR = _SEARCHDATAFRAMESRESPONSE,
-  __module__ = 'proto.framespace.framespace_pb2'
-  # @@protoc_insertion_point(class_scope:framespace.SearchDataFramesResponse)
-  ))
-_sym_db.RegisterMessage(SearchDataFramesResponse)
-
-SliceDataFrameRequest = _reflection.GeneratedProtocolMessageType('SliceDataFrameRequest', (_message.Message,), dict(
-  DESCRIPTOR = _SLICEDATAFRAMEREQUEST,
-  __module__ = 'proto.framespace.framespace_pb2'
-  # @@protoc_insertion_point(class_scope:framespace.SliceDataFrameRequest)
-  ))
-_sym_db.RegisterMessage(SliceDataFrameRequest)
+_sym_db.RegisterMessage(BuildDataFrameRequest)
 
 
 _KEYSPACE_METADATAENTRY.has_options = True

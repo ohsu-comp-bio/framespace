@@ -2,6 +2,7 @@ import ujson as json
 from flask import request
 from flask_restful import Resource
 from bson import ObjectId
+import uuid
 
 from api.exceptions import JsonRequiredException, DataFrameNotFoundException, BadRequestException
 import util as util
@@ -11,15 +12,17 @@ import pandas as pd
 
 class DataFrame(Resource):
   """
-  API Resource that describes a dataframe slice.
-
-  message SliceDataFrameRequest {
-    string dataframe_id = 1;
-    Dimension new_major = 2;
-    Dimension new_minor = 3;
-    int32 page_start = 4;
-    int32 page_end = 5;
+  The DataFrame endpoint is designed to aggregate vectors across multiple keyspaces.
+  The API for this v1.0 endpoint is under development, but the proposed solution is 
+  a request object like the following:
+  
+  message BuildDataFrameRequest {
+    repeated Dimension new_major = 1;
+    repeated Dimension new_minor = 2;
+    int32 page_size = 3;
   }
+
+  which returns a single instance of the following dataframe object
 
   message DataFrame {
     string id = 1;
@@ -34,132 +37,110 @@ class DataFrame(Resource):
   def __init__(self, db):
     self.db = db
 
-  def get(self, dataframe_id):
+  def get(self):
     """
-    GET /dataframe/<dataframe_id>
+    GET /dataframe
     """
-    transpose = bool(request.args.get('transpose', False))
-    request_args = self.translateGetArgs(request, dataframe_id)
-    return self.sliceDataFrame(json.dumps(request_args), transpose=transpose)
-
+    pass
 
   def post(self):
     """
-    POST {"dataframeId": ID}
-    Returns a dataframe or a subset of a dataframe. 
-    Unsupported: Transpose via passing dimensions. 
+    POST
+    Request to build a dataframe based off a combination of
+    keyspaces, keys, and units. 
     Speed up by by-passing proto message creation in response
     """
     if request.json is None:
       raise JsonRequiredException()
 
-    return self.sliceDataFrame(json.dumps(request.json))
+    return self.buildDataFrame(json.dumps(request.json))
 
 
-  def sliceDataFrame(self, request, transpose=False):
+  def buildDataFrame(self, request, transpose=False):
 
-    # inits
-    vec_filters = {}
+    jreq = util.fromJson(request, fs.BuildDataFrameRequest)
+    print json_format._MessageToJsonObject(jreq, True)
 
-    # validate request
-    jreq = util.fromJson(request, fs.SliceDataFrameRequest)
+    major_keyspaces = [dimension.keyspace_id for dimension in jreq.major]
+    minor_keyspaces = [dimension.keyspace_id for dimension in jreq.minor]
 
-    if not jreq.dataframe_id:
-      raise BadRequestException("dataframeId is required for sliceDataFrame")
+    unit_ids = [unit.id for unit in jreq.units]
 
-    # first request to get dataframe
-    result = self.db.dataframe.find_one({"_id": ObjectId(str(jreq.dataframe_id))})
+    filters = {}
+    major_keys = []
+    minor_keys = []
 
-    if result is None:
-      raise DataFrameNotFoundException(jreq.dataframe_id)
-
-    # prep vector query
-    vc = result.get('contents', [])
+    # address errors related to missing values
+    filters.setdefault('$and',[])
+    if len(major_keyspaces) > 0:
+      filters['$and'].append({'majks': util.getMongoFieldFilter(major_keyspaces, ObjectId)})
+      major_keys = self.setDimensionFilters(jreq.major, [key for key in dimension.keys for dimension in jreq.major])
     
-    # save page end for later check
-    page_end = int(jreq.page_end)
-    # if page start is outside of dataframe length, return empty
-    if jreq.page_start > len(vc):
-      dataframe = {"id": str(result["_id"]), \
-                 "major": {"keyspaceId": str(result['major']), "keys": []}, \
-                 "minor": {"keyspaceId": str(result['minor']), "keys": []}, \
-                 "contents": []}
-      return util.buildResponse(dataframe)
-     
-    elif jreq.page_end > len(vc) or len(jreq.new_minor.keys) > 0 or jreq.page_end == 0:
-      jreq.page_end = len(vc)
+    if len(minor_keyspaces) > 0:
+      filters['$and'].append({'minks': util.getMongoFieldFilter(minor_keyspaces, ObjectId)})
+      minor_keys = [key for key in dimension.keys for dimension in jreq.minor]
+    
+    if len(unit_ids) > 0:
+      filters['$and'].append({'units': util.getMongoFieldFilter(unit_ids, ObjectId)})
+    
+    if len(minor_keys) > 0:
+      filters['$and'].append({'key': {"$in": minor_keys}})
 
-    # construct vector filters
-    vec_filters["_id"] = {"$in": vc[jreq.page_start:jreq.page_end]}
+    print filters
 
-    if not transpose:
-      kmaj_keys = self.setDimensionFilters(jreq.new_major.keys, jreq.new_minor.keys, vec_filters)
-    else:
-      kmaj_keys = self.setDimensionFilters(jreq.new_minor.keys, jreq.new_major.keys, vec_filters)
+    agg_set = [{"$match": filters}]
 
-    # seconrd query to backend to get contents
-    vectors = self.db.vector.find(vec_filters, kmaj_keys)
+    if len(major_keys) > 0:
+      agg_set.append({"$project": major_keys})
+
+    agg_set.append({"$group": {"_id": "$key", "contents": {"$push": "$contents"}}})
+    
+    if jreq.page_size != 0:
+      agg_set.append({"$limit": jreq.page_size})
+
+    vectors = self.db.vector.aggregate(agg_set)
     vectors.batch_size(1000000)
-    # construct response
 
-    contents = {vector["key"]:vector["contents"] for vector in vectors}
-    if transpose:
-      # this is the overhead
-      d = pd.DataFrame.from_dict(contents, orient="index")
-      contents = d.to_dict()
+    if vectors is None:
+      raise ObjectNotFoundException()
 
-    # avoid invalid keys passing through to keys
-    # explore impacts on response time
-    kmaj_keys = []
-    if len(jreq.new_major.keys) > 0:
-      kmaj_keys = contents[contents.keys()[0]].keys()
-    # return keys in dimension, 
-    # if the whole dimension is not returned
-    kmin_keys = []
-    # if len(jreq.new_minor.keys) > 0 or page_end < len(vc):
-    if len(jreq.new_minor.keys) > 0 or page_end == 0:
-      kmin_keys = contents.keys()
+    contents = {vector['_id']:mergeDicts(vector['contents']) for vector in vectors}
 
-    dataframe = {"id": str(result["_id"]), \
-                 "major": {"keyspaceId": str(result['major']), "keys": kmaj_keys}, \
-                 "minor": {"keyspaceId": str(result['minor']), "keys": kmin_keys}, \
-                 "contents": contents}
+    # explore options for metadata
+    dataframe = {"id": str(uuid.uuid4()), 
+                 "contents": contents, 
+                 "metadata": {"keyspaces": major_keyspaces + minor_keyspaces, 'units': unit_ids}}
 
     return util.buildResponse(dataframe)
- 
 
-  def setDimensionFilters(self, major_keys, minor_keys, vec_filters):
-    kmaj_keys = None
-    if len(major_keys) > 0:
-      kmaj_keys = {"contents."+str(k):1 for k in major_keys}
+  def buildDimensionFilters(self, keys):
+    """
+    Function that sets filters on desired keys
+    """
+    kmaj_keys = {}
+    if len(keys) > 0:
+      kmaj_keys = {"contents."+str(k):1 for k in keys}
       kmaj_keys['key'] = 1
-
-    if len(minor_keys) > 0:
-      vec_filters['key'] = {"$in": map(str, minor_keys)}
-
     return kmaj_keys
 
-  def translateGetArgs(self, request, dataframe_id):
+  def setDimensionFilters(self, dimension_set, keys):
     """
-    Handles json building for get args, for json <-> pb support
+    Handles the case where one dimension keys list is null, meaning return all keys
+    and another dimensions keys list has items in it
     """
-    d = {'dataframeId': dataframe_id}
-    for arg in request.args:
-      if arg[:4] == 'page':
-        d[str(arg)] = int(request.args[arg][0])
-      if arg[:3] == 'new':
-        d[str(arg)] = {'keys': request.args[arg].split(',')}
-    return d
+    major_keys = {}
+    if len(keys) > 0:
+      major_keys = self.buildDimensionFilters(keys)
+      for dim in dimension_set:
+        if len(dim.keys) == 0 and len(major_keys) > 0:
+          ks = self.db.keyspace.find_one({'_id': ObjectId(dim.keyspace_id)})
+          major_keys.update(self.buildDimensionFilters(ks['keys']))
+    return major_keys
 
 
-class Transpose(DataFrame):
-  """
-  Class for Translating DataFrame Resource
-  """
+def mergeDicts(diction):
+  t = diction[0]
+  for i in diction[1:]:
+    t.update(i)
+  return t
 
-  def __init__(self, db):
-    self.db = db
-
-  def get(self, dataframe_id):
-    request_args = self.translateGetArgs(request, dataframe_id)
-    return self.sliceDataFrame(json.dumps(request_args), transpose=True)
