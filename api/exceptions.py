@@ -1,17 +1,22 @@
 import traceback
 
 class ServerException(Exception):
-    httpStatus = 500
+  httpStatus = 500
 
 class BadRequestException(Exception):
-    httpStatus = 400
+  httpStatus = 400
+
+class RequiredFieldException(BadRequestException):
+  def __init__(self, required_field):
+    self.message = "The {} field may not be blank.".format(
+      required_field)
 
 class JsonRequiredException(BadRequestException):
-    message = "Bad content type, must be application/json."
+  message = "Bad content type, must be application/json."
 
 class NotFoundException(Exception):
-    httpStatus = 404
-    status_code = 404
+  httpStatus = 404
+  status_code = 404
 
 class ObjectNotFoundException(NotFoundException):
   message = "The request object was not found."

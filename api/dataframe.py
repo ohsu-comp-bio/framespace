@@ -4,7 +4,7 @@ from flask_restful import Resource
 from bson import ObjectId
 import uuid
 
-from api.exceptions import JsonRequiredException, DataFrameNotFoundException, BadRequestException
+from api.exceptions import JsonRequiredException, DataFrameNotFoundException, BadRequestException, RequiredFieldException
 import util as util
 from proto.framespace import framespace_pb2 as fs
 from google.protobuf import json_format
@@ -26,11 +26,8 @@ class DataFrame(Resource):
 
   message DataFrame {
     string id = 1;
-    Dimension major = 2;
-    Dimension minor = 3;
-    repeated Unit units = 4;
-    map<string, string> metadata = 5;
-    map<string, google.protobuf.Struct> contents = 6;
+    map<string, string> metadata = 2;
+    map<string, google.protobuf.Struct> contents = 3;
   }
   """
 
@@ -61,32 +58,25 @@ class DataFrame(Resource):
     jreq = util.fromJson(request, fs.BuildDataFrameRequest)
     print json_format._MessageToJsonObject(jreq, True)
 
+    if len(jreq.major) == 0 or len(jreq.minor) == 0 or len(jreq.units) == 0:
+      raise RequiredFieldException('minor, major, and units')
+    
+    # build query sets
+    filters = {}
+    filters.setdefault('$and',[])
     major_keyspaces = [keyset.keyspace_id for keyset in jreq.major]
     minor_keyspaces = [keyset.keyspace_id for keyset in jreq.minor]
-
+    minor_keys = [key for key in keyset.keys for keyset in jreq.minor]
+    major_keys = self.setDimensionFilters(jreq.major, [key for key in keyset.keys for keyset in jreq.major])
     unit_ids = [unit.id for unit in jreq.units]
-
-    filters = {}
-    major_keys = []
-    minor_keys = []
-
-    # address errors related to missing values
-    filters.setdefault('$and',[])
-    if len(major_keyspaces) > 0:
-      filters['$and'].append({'majks': util.getMongoFieldFilter(major_keyspaces, ObjectId)})
-      major_keys = self.setDimensionFilters(jreq.major, [key for key in keyset.keys for keyset in jreq.major])
     
-    if len(minor_keyspaces) > 0:
-      filters['$and'].append({'minks': util.getMongoFieldFilter(minor_keyspaces, ObjectId)})
-      minor_keys = [key for key in keyset.keys for keyset in jreq.minor]
-    
-    if len(unit_ids) > 0:
-      filters['$and'].append({'units': util.getMongoFieldFilter(unit_ids, ObjectId)})
-    
+    # build filter object
+    filters['$and'].append({'majks': util.getMongoFieldFilter(major_keyspaces, ObjectId)})
+    filters['$and'].append({'minks': util.getMongoFieldFilter(minor_keyspaces, ObjectId)})
+    filters['$and'].append({'units': util.getMongoFieldFilter(unit_ids, ObjectId)})
+  
     if len(minor_keys) > 0:
       filters['$and'].append({'key': {"$in": minor_keys}})
-
-    print filters
 
     agg_set = [{"$match": filters}]
 
