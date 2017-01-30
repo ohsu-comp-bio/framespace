@@ -55,6 +55,7 @@ class DataFrame(Resource):
 
   def buildDataFrame(self, request, transpose=False):
 
+    print request
     jreq = util.fromJson(request, fs.BuildDataFrameRequest)
     print json_format._MessageToJsonObject(jreq, True)
 
